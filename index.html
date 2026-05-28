@@ -320,7 +320,7 @@ body{font-family:'Poppins','Segoe UI',sans-serif;background:var(--bg);color:var(
           onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <div id="liErr" style="display:none;background:rgba(220,38,38,0.35);border-radius:8px;padding:9px 12px;color:white;font-size:12px;font-weight:600;margin-bottom:12px;text-align:center"></div>
-      <button onclick="doLogin()"
+      <button id="btnEntrar" onclick="doLogin()"
         style="width:100%;padding:14px;background:white;color:#C2185B;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;font-family:Poppins,sans-serif;">
         ✨ ENTRAR
       </button>
@@ -2076,124 +2076,133 @@ let _usuario = null;
 
 async function doLogin() {
   var u = (document.getElementById('liUser').value || '').trim().toLowerCase().replace(/\s/g,'');
-  var p = document.getElementById('liPass').value || '';
+  var p = (document.getElementById('liPass').value || '').trim();
   var errEl = document.getElementById('liErr');
-  var btn = document.querySelector('#loginScreen button');
-  if (!u || !p) { errEl.textContent = 'ESCRIBE USUARIO Y CONTRASEÑA'; errEl.style.display = ''; return; }
-  
+  var btn   = document.getElementById('btnEntrar');
+
+  errEl.style.display = 'none';
+  errEl.textContent   = '';
+
+  if (!u || !p) {
+    errEl.textContent = 'ESCRIBE USUARIO Y CONTRASEÑA';
+    errEl.style.display = '';
+    return;
+  }
+
   if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
 
-  try {
-    if (fbReady && fbLic) {
-      // Verificar licencia en Firebase
-      var snap = await Promise.race([
-        fbLic.doc(u).get(),
-        new Promise(function(_, r){ setTimeout(function(){ r(new Error('timeout')); }, 6000); })
-      ]);
-      
-      if (!snap.exists) {
-        errEl.textContent = '❌ Usuario no encontrado';
-        errEl.style.display = '';
-        if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-        document.getElementById('liPass').value = '';
-        return;
-      }
-      
-      var lic = snap.data();
-      
-      // Verificar contraseña
-      if (lic.password !== p) {
-        errEl.textContent = '❌ Contraseña incorrecta';
-        errEl.style.display = '';
-        if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-        document.getElementById('liPass').value = '';
-        return;
-      }
-      
-      // Verificar que esté activa
-      if (!lic.activa) {
-        errEl.textContent = '🔴 Licencia inactiva. Contacta al administrador.';
-        errEl.style.display = '';
-        if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-        return;
-      }
-      
-      // Verificar vencimiento
-      if (lic.vencimiento) {
-        var hoy = new Date(); hoy.setHours(0,0,0,0);
-        var venc = new Date(lic.vencimiento + 'T00:00:00');
-        if (venc < hoy) {
-          var diasV = Math.abs(Math.ceil((venc - hoy)/(1000*60*60*24)));
-          errEl.textContent = '💀 Suscripción vencida hace ' + diasV + ' día(s). Renueva para continuar.';
-          errEl.style.display = '';
-          if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-          return;
-        }
-        // Aviso si vence pronto
-        var diasRestantes = Math.ceil((venc - hoy)/(1000*60*60*24));
-        if (diasRestantes <= 5) {
-          toast('⚠️ TU SUSCRIPCIÓN VENCE EN ' + diasRestantes + ' DÍA(S)', 'error');
-        }
-      }
-      
-      // Guardar datos de la licencia en cfg
-      cfg.farmaciaName = lic.farmaciaName || cfg.bizName;
-      if (lic.farmaciaName) {
-        cfg.bizName = lic.farmaciaName;
-        document.getElementById('hdrName').textContent = cfg.bizName;
-        var loginBiz = document.getElementById('loginBizName');
-        if (loginBiz) loginBiz.textContent = cfg.bizName;
-      }
-      
-    } else {
-      // Modo offline: verificar contra cfg local
-      var users = cfg.users || [{user:'admin',pass:'1234'}];
-      var ok = users.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
-      if (!ok) {
-        errEl.textContent = '❌ Usuario o contraseña incorrectos';
-        errEl.style.display = '';
-        if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-        document.getElementById('liPass').value = '';
-        return;
-      }
-    }
-    
-    // LOGIN EXITOSO
-    _usuario = u;
-    sessionStorage.setItem('pos_session', u);
-    
-    // Inicializar ruta Firebase AISLADA para este usuario
-    iniciarFirebaseUser(u);
-    
-    // Cargar datos del usuario (su propio documento)
-    if (btn) { btn.textContent = '🌸 Cargando...'; }
-    await loadData();
-    
-    document.getElementById('loginScreen').style.display = 'none';
-    showTab('venta');
-    if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-    toast('¡BIENVENIDA! 🌸');
-    setTimeout(avisarStockBajo, 2500);
-    
-  } catch(e) {
-    console.warn('Login error:', e);
-    // Si hay error de red, intentar login offline
-    var usersOff = cfg.users || [{user:'admin',pass:'1234'}];
-    var okOff = usersOff.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
-    if (okOff) {
-      _usuario = u;
-      sessionStorage.setItem('pos_session', u);
-      iniciarFirebaseUser(u);
-      document.getElementById('loginScreen').style.display = 'none';
-      showTab('venta');
-      toast('✅ MODO SIN CONEXIÓN');
-    } else {
-      errEl.textContent = '⚠️ Sin conexión. Verifica tu internet.';
-      errEl.style.display = '';
-    }
+  function mostrarError(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = '';
     if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
   }
+
+  function entrarApp() {
+    _usuario = u;
+    sessionStorage.setItem('pos_session', u);
+    iniciarFirebaseUser(u);
+    loadData().then(function(){
+      document.getElementById('loginScreen').style.display = 'none';
+      showTab('venta');
+      toast('¡BIENVENIDA! 🌸');
+      setTimeout(avisarStockBajo, 2500);
+      if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
+    }).catch(function(){
+      document.getElementById('loginScreen').style.display = 'none';
+      showTab('venta');
+      toast('¡BIENVENIDA! 🌸');
+      if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
+    });
+  }
+
+  // INTENTO 1: Verificar en Firebase
+  if (fbReady && fbLic) {
+    try {
+      if (btn) btn.textContent = '☁️ Conectando...';
+      var snap = null;
+      try {
+        snap = await Promise.race([
+          fbLic.doc(u).get(),
+          new Promise(function(_, r){ setTimeout(function(){ r(new Error('timeout')); }, 8000); })
+        ]);
+      } catch(netErr) {
+        // Sin conexión - intentar modo offline
+        if (btn) btn.textContent = '📱 Sin red, verificando...';
+        var usersLocal = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
+        var okLocal = usersLocal.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
+        if (okLocal) { entrarApp(); return; }
+        mostrarError('⚠️ Sin conexión a internet. Verifica tu red.');
+        return;
+      }
+
+      if (!snap || !snap.exists) {
+        mostrarError('❌ Usuario "' + u + '" no encontrado. Verifica con tu administrador.');
+        return;
+      }
+
+      var lic = snap.data();
+
+      // Verificar contraseña
+      if (!lic.password || lic.password !== p) {
+        mostrarError('❌ Contraseña incorrecta.');
+        return;
+      }
+
+      // Verificar activa
+      if (lic.activa === false) {
+        mostrarError('🔴 Licencia inactiva. Contacta al administrador.');
+        return;
+      }
+
+      // Verificar vencimiento
+      if (lic.vencimiento) {
+        try {
+          var hoy  = new Date(); hoy.setHours(0,0,0,0);
+          // Support both YYYY-MM-DD and DD/MM/YYYY formats
+          var vStr = lic.vencimiento;
+          if (vStr.includes('/')) {
+            var parts = vStr.split('/');
+            vStr = parts[2] + '-' + parts[1] + '-' + parts[0];
+          }
+          var venc = new Date(vStr + 'T00:00:00');
+          if (!isNaN(venc) && venc < hoy) {
+            var dias = Math.ceil((hoy - venc) / (1000*60*60*24));
+            mostrarError('💀 Suscripción vencida hace ' + dias + ' día(s). Comunícate con tu administrador.');
+            return;
+          }
+          if (!isNaN(venc)) {
+            var restantes = Math.ceil((venc - hoy) / (1000*60*60*24));
+            if (restantes <= 5) toast('⚠️ TU SUSCRIPCIÓN VENCE EN ' + restantes + ' DÍA(S)', 'error');
+          }
+        } catch(dateErr) { /* si la fecha falla, no bloquear */ }
+      }
+
+      // Poner nombre del negocio
+      if (lic.farmaciaName) {
+        cfg.bizName = lic.farmaciaName;
+        var hEl = document.getElementById('hdrName');
+        if (hEl) hEl.textContent = cfg.bizName;
+      }
+
+      // ✅ LOGIN EXITOSO
+      entrarApp();
+
+    } catch(e) {
+      // Error inesperado - fallback offline
+      var usersOff = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
+      var okOff = usersOff.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
+      if (okOff) { entrarApp(); }
+      else { mostrarError('⚠️ Error al conectar. Intenta de nuevo.'); }
+    }
+  } else {
+    // Sin Firebase - modo local
+    var usersLoc = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
+    var okLoc = usersLoc.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
+    if (okLoc) { entrarApp(); }
+    else { mostrarError('❌ Usuario o contraseña incorrectos.'); }
+  }
 }
+
 
 function cerrarSesion() {
   if (!confirm('¿CERRAR SESIÓN?')) return;
