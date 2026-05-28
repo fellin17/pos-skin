@@ -795,7 +795,7 @@ async function loadData() {
     }
 
     // Escuchar cambios en tiempo real
-    fbDoc.onSnapshot(snap => {
+    if (fbDoc) fbDoc.onSnapshot(snap => {
       if (snap.exists) {
         applyData(snap.data());
         localStorage.setItem('brandy_pos_backup', JSON.stringify(snap.data()));
@@ -804,6 +804,8 @@ async function loadData() {
         renderNotas();
       }
     }, () => setSyncStatus('🔴 Sin conexión'));
+  } else if (!fbDoc) {
+    setSyncStatus('🔐 Esperando login...');
   } else {
     setSyncStatus('📱 Modo local');
   }
@@ -823,7 +825,7 @@ function applyData(data) {
 async function saveData() {
   const data = { products, sales, cuts, cfg };
   try { localStorage.setItem('brandy_pos_backup', JSON.stringify(data)); } catch {}
-  if (fbReady) fbDoc.set(data).catch(() => {});
+  if (fbReady && fbDoc) fbDoc.set(data).catch(() => {});
 }
 
 function setSyncStatus(msg) {
