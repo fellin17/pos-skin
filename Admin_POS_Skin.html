@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Admin — Brandy Skin POS</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8;min-height:100vh}
+
+/* LOGIN */
+#loginWrap{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#880E4F,#C2185B,#E91E63)}
+.login-box{background:white;border-radius:20px;padding:40px 32px;width:100%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.login-box .ico{font-size:52px;margin-bottom:12px}
+.login-box h1{color:#1e293b;font-size:22px;margin-bottom:6px}
+.login-box p{color:#64748b;font-size:13px;margin-bottom:28px}
+.login-box input{width:100%;padding:13px 15px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;margin-bottom:12px;outline:none;color:#1e293b}
+.login-box input:focus{border-color:#C2185B}
+.btn-entrar{width:100%;padding:14px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;border:none;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer}
+.err-msg{display:none;margin-top:12px;padding:10px;background:#fee2e2;color:#dc2626;border-radius:8px;font-size:13px}
+
+/* PANEL */
+#panelWrap{display:none;min-height:100vh}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,#1e293b,#0f172a);color:white;padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,0.3)}
+.hdr h1{font-size:17px;flex:1}
+.hdr .badge{background:linear-gradient(135deg,#3b82f6,#7c3aed);font-size:11px;font-weight:700;padding:4px 12px;border-radius:99px}
+.btn-salir{padding:8px 16px;background:transparent;border:1px solid #475569;color:#94a3b8;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-salir:hover{border-color:#ef4444;color:#ef4444}
+
+/* CONTAINER */
+.cont{max-width:1100px;margin:0 auto;padding:24px 16px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px}
+.stat{background:white;border-radius:14px;padding:18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0}
+.stat .n{font-size:32px;font-weight:900;margin-bottom:4px}
+.stat .l{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+
+/* FILTROS */
+.filtros{background:white;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #e2e8f0;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filtros label{font-size:12px;font-weight:700;color:#64748b}
+.filtros select,.filtros input{padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;color:#1e293b;background:white}
+.filtros select:focus,.filtros input:focus{border-color:#C2185B}
+.filtros input{min-width:200px;flex:1}
+
+/* SECCIÓN */
+.sec{background:white;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:20px;border:1px solid #e2e8f0;overflow:hidden}
+.sec-hdr{padding:14px 18px;border-bottom:2px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:linear-gradient(to right,#f8fafc,white)}
+.sec-hdr h2{font-size:15px;color:#1e293b;font-weight:800}
+.sec-body{padding:16px}
+
+/* GRUPO ADMIN */
+.grupo-admin{margin-bottom:24px}
+.grupo-admin-header{background:linear-gradient(135deg,#880E4F,#C2185B);color:white;border-radius:12px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.grupo-admin-header .admin-nombre{font-size:16px;font-weight:900;flex:1}
+.grupo-admin-header .admin-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cajeros-lista{padding-left:20px;border-left:3px solid #3b82f6;margin-left:16px}
+.cajero-conector{position:relative}
+.cajero-conector::before{content:'';position:absolute;left:-23px;top:20px;width:20px;height:2px;background:#3b82f6;opacity:.5}
+
+/* USUARIO CARD */
+.u-card{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:8px;transition:box-shadow .2s}
+.u-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.u-card.admin-card{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-color:#0ea5e9}
+.u-card.cajero-card{background:white;border-color:#e2e8f0}
+.u-top{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.u-info{flex:1;min-width:140px}
+.u-name{font-size:16px;font-weight:800;color:#1e293b;margin-bottom:4px}
+.u-farmacia{font-size:13px;color:#0369a1;font-weight:700;margin-bottom:4px}
+.u-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}
+.u-acts{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
+
+/* PERMISOS VISUALES */
+.permisos-box{margin-top:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px}
+.permisos-titulo{font-size:10px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.permisos-grid{display:flex;gap:8px;flex-wrap:wrap}
+.permiso-item{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px}
+.permiso-on{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.permiso-off{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;text-decoration:line-through;opacity:.6}
+
+/* SIN ADMIN */
+.sin-admin-section{margin-bottom:20px}
+.sin-admin-header{background:#fef3c7;border:1.5px dashed #f59e0b;border-radius:12px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.sin-admin-header span{font-size:13px;font-weight:700;color:#92400e}
+
+/* DISPOSITIVOS */
+.devs{margin-top:10px;border-top:1px solid #e2e8f0;padding-top:10px}
+.dev-row{display:flex;align-items:center;gap:8px;background:#e2e8f0;border-radius:8px;padding:7px 10px;margin-bottom:6px;flex-wrap:wrap}
+.dev-name{font-size:12px;flex:1;color:#334155;font-weight:600}
+.dev-fecha{font-size:11px;color:#94a3b8}
+
+/* TAGS */
+.tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px}
+.tg{background:#dcfce7;color:#166534}
+.tr{background:#fee2e2;color:#dc2626}
+.tb{background:#dbeafe;color:#1d4ed8}
+.ty{background:#fef3c7;color:#92400e}
+.tp{background:#f3e8ff;color:#7c3aed}
+
+/* BOTONES */
+.btn{padding:7px 12px;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.b-pri{background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:white}
+.b-suc{background:#10b981;color:white}
+.b-dan{background:#ef4444;color:white}
+.b-war{background:#f59e0b;color:white}
+.b-gho{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.b-pur{background:#8b5cf6;color:white}
+.b-sm{padding:5px 10px;font-size:11px}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.modal-bg.oculto{display:none}
+.modal{background:white;border-radius:16px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h3{font-size:16px;font-weight:800;color:#1e293b;margin-bottom:18px}
+.campo{margin-bottom:12px}
+.campo label{display:block;font-size:12px;color:#64748b;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+.campo input,.campo select{width:100%;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;color:#1e293b}
+.campo input:focus,.campo select:focus{border-color:#C2185B}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* NOTA PAGO */
+.nota-p{font-size:11px;color:#64748b;font-style:italic;margin-top:4px;background:#fef9c3;padding:4px 8px;border-radius:6px;display:inline-block}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:700;transform:translateY(60px);opacity:0;transition:all .3s;max-width:320px}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{background:#dcfce7;color:#166534;border:1px solid #10b981}
+#toast.error{background:#fee2e2;color:#dc2626;border:1px solid #ef4444}
+#toast.info{background:#dbeafe;color:#1d4ed8;border:1px solid #3b82f6}
+
+.empty{text-align:center;padding:32px;color:#94a3b8;font-size:14px}
+.venc-ok{background:#dcfce7;color:#166534;border:1px solid #86efac;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px}
+.venc-warn{background:#fef3c7;color:#92400e;border:1px solid #f59e0b;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;animation:pulso .8s infinite alternate}
+.venc-danger{background:#fee2e2;color:#dc2626;border:1px solid #ef4444;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px;animation:pulso .5s infinite alternate}
+.venc-expired{background:#1e293b;color:white;border:1px solid #475569;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px}
+@keyframes pulso{from{opacity:1}to{opacity:.6}}
+#alertaVoz{position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:500;background:linear-gradient(135deg,#dc2626,#991b1b);color:white;padding:16px 24px;border-radius:14px;font-size:14px;font-weight:700;box-shadow:0 8px 32px rgba(0,0,0,.4);max-width:500px;width:90%;text-align:center;display:none}
+#alertaVoz button{margin-top:10px;padding:8px 20px;background:white;color:#dc2626;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px}
+.vista-btn{padding:6px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:white;color:#64748b}
+.vista-btn.activo{background:#1d4ed8;color:white;border-color:#1d4ed8}
+
+@media(max-width:600px){
+  .hdr{padding:12px 14px}
+  .filtros{padding:10px 12px}
+  .cajeros-lista{padding-left:10px;margin-left:8px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginWrap">
+  <div class="login-box">
+    <div class="ico">🌸</div>
+    <h1>Panel de Administración</h1>
+    <p>Farmacia POS — Solo propietario</p>
+    <input id="masterPass" type="password" placeholder="Contraseña maestra"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-entrar" onclick="doLogin()">Entrar al Panel →</button>
+    <div class="err-msg" id="errMsg">❌ Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- PANEL -->
+<div id="panelWrap">
+  <div class="hdr">
+    <span style="font-size:24px">💊</span>
+    <h1>Panel de Administración — Farmacia POS</h1>
+    <span class="badge">SUPERADMIN</span>
+    <button class="btn-salir" onclick="doLogout()">🚪 Salir</button>
+  </div>
+  <div class="cont">
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat"><div class="n" id="stTotal" style="color:#3b82f6">0</div><div class="l">Total usuarios</div></div>
+      <div class="stat"><div class="n" id="stAdmins" style="color:#f59e0b">0</div><div class="l">Admins</div></div>
+      <div class="stat"><div class="n" id="stCajeros" style="color:#8b5cf6">0</div><div class="l">Cajeros</div></div>
+      <div class="stat"><div class="n" id="stAct" style="color:#10b981">0</div><div class="l">Activos</div></div>
+      <div class="stat"><div class="n" id="stDisp" style="color:#0ea5e9">0</div><div class="l">Dispositivos</div></div>
+      <div class="stat"><div class="n" id="stInact" style="color:#ef4444">0</div><div class="l">Inactivos</div></div>
+    </div>
+
+    <!-- FILTROS Y ACCIONES -->
+    <div class="filtros">
+      <label>🔍</label>
+      <input id="filtBuscar" placeholder="Buscar usuario o farmacia..." oninput="aplicarFiltros()">
+      <select id="filtRol" onchange="aplicarFiltros()">
+        <option value="">Todos los roles</option>
+        <option value="admin">👑 Solo Admins</option>
+        <option value="cajero">🛒 Solo Cajeros</option>
+      </select>
+      <select id="filtEstado" onchange="aplicarFiltros()">
+        <option value="">Todos los estados</option>
+        <option value="activa">🟢 Activos</option>
+        <option value="inactiva">🔴 Inactivos</option>
+      </select>
+      <select id="filtVista" onchange="aplicarFiltros()">
+        <option value="arbol">🌳 Vista árbol (Admin → Cajeros)</option>
+        <option value="lista">📋 Lista plana</option>
+      </select>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn b-gho" onclick="recargar()">🔄 Actualizar</button>
+        <button class="btn b-pri" onclick="abrirCrear()">➕ Nuevo usuario</button>
+      </div>
+    </div>
+
+    <!-- GRID DE USUARIOS -->
+    <div id="userGrid"><div class="empty">⏳ Cargando...</div></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modalU" class="modal-bg oculto">
+  <div class="modal">
+    <h3 id="mTit">➕ Nuevo usuario</h3>
+    <div class="campo"><label>Usuario (minúsculas, sin espacios)</label><input id="mUser" type="text" placeholder="ej: cajero1" autocapitalize="none"></div>
+    <div class="campo"><label>Nombre del negocio / punto de venta</label><input id="mFarmaciaName" type="text" placeholder="ej: Farmacia Centro"></div>
+    <div class="campo"><label>Contraseña</label><input id="mPass" type="text" placeholder="ej: 1234"></div>
+    <div class="campo"><label>Rol</label>
+      <select id="mRol" onchange="togglePermisosModal(this.value)">
+        <option value="cajero">🛒 Cajero — venta e inventario</option>
+        <option value="admin">👑 Admin — acceso completo a sus farmacias</option>
+      </select>
+    </div>
+    <div class="campo" id="campoAdminId"><label>ID del Admin al que pertenece</label><input id="mAdminId" type="text" placeholder="ej: farmacia1 (usuario del admin)"></div>
+    <div id="seccionPermisos" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:11px;font-weight:800;color:#166534;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Permisos adicionales del cajero</div>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="pCorte" style="width:16px;height:16px"> ✂️ Puede hacer corte de caja
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="pReportes" style="width:16px;height:16px"> 📊 Puede ver reportes de ventas
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="pConfig" style="width:16px;height:16px"> ⚙️ Puede modificar configuración
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="pInvEdit" checked style="width:16px;height:16px"> 🗑️ Puede eliminar productos del inventario
+      </label>
+    </div>
+    <div class="campo"><label>Dispositivos permitidos</label>
+      <select id="mDisp">
+        <option value="1">1 dispositivo (plan base)</option>
+        <option value="2">2 dispositivos</option>
+        <option value="3">3 dispositivos</option>
+        <option value="4">4 dispositivos</option>
+      </select>
+    </div>
+    <div class="campo"><label>📅 Fecha de vencimiento de suscripción</label>
+      <input id="mVencimiento" type="date" style="width:100%;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;color:#1e293b">
+      <div id="mVencimientoInfo" style="margin-top:6px;font-size:12px;font-weight:700;display:none"></div>
+    </div>
+    <div class="campo"><label>Nota de pago (opcional)</label><input id="mNota" type="text" placeholder="ej: Pagó abril 2025"></div>
+    <div class="modal-btns">
+      <button class="btn b-gho" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn b-pri" id="btnG" onclick="guardar()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="alertaVoz">
+  <div id="alertaVozMsg"></div>
+  <button onclick="cerrarAlertaVoz()">✓ Entendido</button>
+</div>
+
+<script>
+const MP = 'Jarras2009';
+const fbCfg = {
+  apiKey:'AIzaSyCiHnc83l0perqo7sgRQockGMA6pn2gTrQ',
+  authDomain:'pos-skin.firebaseapp.com',
+  projectId:'pos-skin',
+  storageBucket:'pos-skin.firebasestorage.app',
+  messagingSenderId:'489819063291',
+  appId:'1:489819063291:web:6f862d7b194fddc8f3c15e'
+};
+
+let db=null, lic=null, unsub=null, _todosUsers=[];
+
+try { firebase.initializeApp(fbCfg); db=firebase.firestore(); lic=db.collection('licencias'); } catch(e){}
+
+if (sessionStorage.getItem('_aok')==='1') {
+  document.getElementById('loginWrap').style.display='none';
+  document.getElementById('panelWrap').style.display='block';
+  cargarUsuarios();
+}
+
+function doLogin() {
+  const p=document.getElementById('masterPass').value;
+  if (p===MP) {
+    sessionStorage.setItem('_aok','1');
+    document.getElementById('loginWrap').style.display='none';
+    document.getElementById('panelWrap').style.display='block';
+    cargarUsuarios();
+  } else {
+    const e=document.getElementById('errMsg');
+    e.style.display='block';
+    document.getElementById('masterPass').value='';
+    setTimeout(()=>e.style.display='none',3000);
+  }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('_aok');
+  if(unsub)unsub();
+  document.getElementById('panelWrap').style.display='none';
+  document.getElementById('loginWrap').style.display='flex';
+  document.getElementById('masterPass').value='';
+}
+
+function cargarUsuarios() {
+  const g=document.getElementById('userGrid');
+  if(!lic){g.innerHTML='<div class="empty">⚠️ Sin conexión</div>';return;}
+  if(unsub)unsub();
+  unsub=lic.onSnapshot(snap=>{
+    _todosUsers=[];
+    snap.forEach(d=>_todosUsers.push({id:d.id,...d.data()}));
+    stats(_todosUsers);
+    aplicarFiltros();
+    verificarVencimientosAdmin(_todosUsers);
+  },err=>{g.innerHTML='<div class="empty">❌ '+err.message+'</div>';});
+}
+
+function recargar(){cargarUsuarios();toast('🔄 Actualizando...','info');}
+
+function stats(docs) {
+  document.getElementById('stTotal').textContent = docs.length;
+  document.getElementById('stAdmins').textContent = docs.filter(d=>d.rol==='admin').length;
+  document.getElementById('stCajeros').textContent = docs.filter(d=>d.rol!=='admin').length;
+  document.getElementById('stAct').textContent = docs.filter(d=>d.activa).length;
+  document.getElementById('stInact').textContent = docs.filter(d=>!d.activa).length;
+  document.getElementById('stDisp').textContent = docs.reduce((a,d)=>a+(d.dispositivosActivos?.length||0)+(d.dispositivoActivo?1:0),0);
+}
+
+function aplicarFiltros() {
+  const buscar = document.getElementById('filtBuscar').value.toLowerCase().trim();
+  const rol    = document.getElementById('filtRol').value;
+  const estado = document.getElementById('filtEstado').value;
+  const vista  = document.getElementById('filtVista').value;
+
+  let docs = _todosUsers.filter(u => {
+    const matchBuscar = !buscar ||
+      u.id.toLowerCase().includes(buscar) ||
+      (u.farmaciaName||'').toLowerCase().includes(buscar) ||
+      (u.adminId||'').toLowerCase().includes(buscar);
+    const matchRol    = !rol    || u.rol===rol || (rol==='cajero' && u.rol!=='admin');
+    const matchEstado = !estado || (estado==='activa'?u.activa:!u.activa);
+    return matchBuscar && matchRol && matchEstado;
+  });
+
+  const g = document.getElementById('userGrid');
+  if (!docs.length) { g.innerHTML='<div class="empty">🔍 Sin resultados con ese filtro</div>'; return; }
+
+  if (vista === 'arbol') {
+    renderArbol(docs);
+  } else {
+    g.innerHTML = docs.sort((a,b)=>a.id.localeCompare(b.id)).map(u=>cardHTML(u)).join('');
+  }
+}
+
+function renderArbol(docs) {
+  const g = document.getElementById('userGrid');
+  const admins  = docs.filter(u => u.rol==='admin');
+  const cajeros = docs.filter(u => u.rol!=='admin');
+
+  // Agrupar cajeros por adminId
+  const porAdmin = {};
+  cajeros.forEach(c => {
+    const key = c.adminId || '__sin_admin__';
+    if (!porAdmin[key]) porAdmin[key] = [];
+    porAdmin[key].push(c);
+  });
+
+  let html = '';
+
+  // Admins con sus cajeros
+  admins.sort((a,b)=>a.id.localeCompare(b.id)).forEach(admin => {
+    const misCajeros = porAdmin[admin.id] || [];
+    html += '<div class="grupo-admin">';
+
+    // Header del admin
+    const actBadge = admin.activa ? '<span class="tag tg">🟢 Activa</span>' : '<span class="tag tr">🔴 Inactiva</span>';
+    const dispAct  = (admin.dispositivosActivos||[]).length;
+    const dispPer  = admin.dispositivosPermitidos||1;
+    html += `<div class="grupo-admin-header">
+      <span style="font-size:28px">👑</span>
+      <div style="flex:1">
+        <div class="admin-nombre">${admin.id}</div>
+        <div style="font-size:12px;opacity:.8">${admin.farmaciaName||'Sin nombre de negocio'}</div>
+      </div>
+      <div class="admin-meta">
+        ${actBadge}
+        <span class="tag" style="background:rgba(255,255,255,0.2);color:white">📱 ${dispAct}/${dispPer}</span>
+        <span class="tag" style="background:rgba(255,255,255,0.15);color:white">🔑 ${admin.password||'—'}</span>
+        <span class="tag" style="background:rgba(255,255,255,0.15);color:white">🛒 ${misCajeros.length} cajero${misCajeros.length!==1?'s':''}</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn b-gho b-sm" onclick='editar("${admin.id}")'>✏️ Editar</button>
+        ${admin.activa
+          ? `<button class="btn b-war b-sm" onclick='toggleLic("${admin.id}",false)'>🔴 Desactivar</button>`
+          : `<button class="btn b-suc b-sm" onclick='toggleLic("${admin.id}",true)'>🟢 Activar</button>`}
+        <button class="btn b-dan b-sm" onclick='eliminar("${admin.id}")'>🗑️</button>
+      </div>
+    </div>`;
+
+    // Dispositivos del admin
+    if ((admin.dispositivosActivos||[]).length) {
+      html += `<div style="margin-left:16px;margin-bottom:10px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px">
+        <div style="font-size:10px;font-weight:800;color:#0369a1;text-transform:uppercase;margin-bottom:6px">Dispositivos del Admin</div>`;
+      admin.dispositivosActivos.forEach(d => {
+        html += `<div class="dev-row"><span>📱</span><div class="dev-name">${d.nombre||'Dispositivo'}</div>
+          <div class="dev-fecha">${d.fecha?new Date(d.fecha).toLocaleDateString('es-MX'):''}</div>
+          <button class="btn b-dan b-sm" onclick='expulsar("${admin.id}",${JSON.stringify(d).replace(/'/g,"\\'")})''>🚫 Expulsar</button>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    // Cajeros de este admin
+    if (misCajeros.length) {
+      html += '<div class="cajeros-lista">';
+      html += `<div style="font-size:11px;font-weight:800;color:#3b82f6;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-left:4px">
+        📋 ${misCajeros.length} Cajero${misCajeros.length!==1?'s':''} vinculado${misCajeros.length!==1?'s':''}
+      </div>`;
+      misCajeros.sort((a,b)=>a.id.localeCompare(b.id)).forEach(c => {
+        html += `<div class="cajero-conector">${cardHTML(c)}</div>`;
+      });
+      html += '</div>';
+    } else {
+      html += `<div style="margin-left:36px;padding:10px 14px;background:#fef9c3;border:1px dashed #f59e0b;border-radius:8px;font-size:12px;color:#92400e">
+        ⚠️ Este admin no tiene cajeros vinculados. Para agregar uno, crea un cajero con adminId = <strong>${admin.id}</strong>
+      </div>`;
+    }
+
+    html += '</div>'; // cierre grupo-admin
+  });
+
+  // Cajeros sin admin asignado
+  const sinAdmin = porAdmin['__sin_admin__'] || [];
+  if (sinAdmin.length) {
+    html += `<div class="sin-admin-section">
+      <div class="sin-admin-header">
+        <span style="font-size:20px">⚠️</span>
+        <span>Cajeros SIN admin asignado (${sinAdmin.length}) — Edítalos y asígnales un adminId</span>
+      </div>`;
+    sinAdmin.forEach(c => { html += cardHTML(c); });
+    html += '</div>';
+  }
+
+  // Admins que no aparecen en docs filtrados pero tienen cajeros
+  // (cuando el filtro muestra solo cajeros)
+  const adminsIds = admins.map(a=>a.id);
+  const cajerosSinAdminEnLista = cajeros.filter(c => c.adminId && !adminsIds.includes(c.adminId));
+  if (cajerosSinAdminEnLista.length && document.getElementById('filtRol').value === 'cajero') {
+    // Agrupar por adminId
+    const grupos = {};
+    cajerosSinAdminEnLista.forEach(c => {
+      if (!grupos[c.adminId]) grupos[c.adminId] = [];
+      grupos[c.adminId].push(c);
+    });
+    Object.entries(grupos).forEach(([adminId, cjs]) => {
+      html += `<div class="grupo-admin">
+        <div class="grupo-admin-header">
+          <span style="font-size:24px">👑</span>
+          <div style="flex:1"><div class="admin-nombre">${adminId}</div><div style="font-size:12px;opacity:.7">Admin (no en filtro actual)</div></div>
+          <span class="tag" style="background:rgba(255,255,255,0.2);color:white">🛒 ${cjs.length} cajero${cjs.length!==1?'s':''}</span>
+        </div>
+        <div class="cajeros-lista">`;
+      cjs.forEach(c => { html += `<div class="cajero-conector">${cardHTML(c)}</div>`; });
+      html += '</div></div>';
+    });
+  }
+
+  if (!html) html = '<div class="empty">🔍 Sin resultados</div>';
+  g.innerHTML = html;
+}
+
+function diasRestantes(fechaStr) {
+  if (!fechaStr) return null;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const venc = new Date(fechaStr + 'T00:00:00');
+  return Math.ceil((venc - hoy) / (1000*60*60*24));
+}
+
+function badgeVencimiento(u) {
+  if (!u.vencimiento) return '';
+  const dias = diasRestantes(u.vencimiento);
+  const fecha = new Date(u.vencimiento + 'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'});
+  if (dias < 0)  return `<span class="venc-expired">💀 Vencida hace ${Math.abs(dias)} día(s)</span>`;
+  if (dias === 0) return `<span class="venc-danger">🚨 ¡Vence HOY!</span>`;
+  if (dias <= 3)  return `<span class="venc-danger">🔥 Vence en ${dias} día(s) · ${fecha}</span>`;
+  if (dias <= 7)  return `<span class="venc-warn">⚠️ Vence en ${dias} días · ${fecha}</span>`;
+  return `<span class="venc-ok">✅ Vigente ${dias} días · ${fecha}</span>`;
+}
+
+function cardHTML(u) {
+  const act  = u.dispositivosActivos || [];
+  const per  = u.dispositivosPermitidos || 1;
+  const esAdmin = u.rol === 'admin';
+
+  const rolT  = esAdmin ? '<span class="tag ty">👑 Admin</span>' : '<span class="tag tb">🛒 Cajero</span>';
+  const estT  = u.activa ? '<span class="tag tg">🟢 Activa</span>' : '<span class="tag tr">🔴 Inactiva</span>';
+  const disT  = `<span class="tag ${act.length>=per?'tr':'tg'}">📱 ${act.length}/${per}</span>`;
+  const nota  = u.notaPago ? `<div class="nota-p">💰 ${u.notaPago}</div>` : '';
+  const vencBadge = badgeVencimiento(u);
+  const admLink = !esAdmin && u.adminId
+    ? `<div style="font-size:12px;color:#0369a1;font-weight:700;margin-bottom:4px">🔗 Admin: <strong>${u.adminId}</strong></div>`
+    : '';
+
+  // Permisos visuales (solo para cajeros)
+  let permisosHTML = '';
+  if (!esAdmin) {
+    const p = u.permisos || {};
+    permisosHTML = `<div class="permisos-box">
+      <div class="permisos-titulo">Permisos asignados</div>
+      <div class="permisos-grid">
+        <span class="permiso-item ${p.corte?'permiso-on':'permiso-off'}">✂️ Corte</span>
+        <span class="permiso-item ${p.reportes?'permiso-on':'permiso-off'}">📊 Reportes</span>
+        <span class="permiso-item ${p.config?'permiso-on':'permiso-off'}">⚙️ Config</span>
+        <span class="permiso-item ${p.inventarioEditar!==false?'permiso-on':'permiso-off'}">🗑️ Inv. editar</span>
+        <span class="permiso-item permiso-on">🛒 Venta</span>
+        <span class="permiso-item permiso-on">📦 Almacén</span>
+      </div>
+    </div>`;
+  }
+
+  // Dispositivos activos (PC — array)
+  let devsHTML = '';
+  if (act.length) {
+    devsHTML = `<div class="devs"><div style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;margin-bottom:6px">💻 Dispositivos PC activos</div>`;
+    act.forEach(d => {
+      devsHTML += `<div class="dev-row"><span>💻</span>
+        <div class="dev-name">${d.nombre||'Dispositivo'}</div>
+        <div class="dev-fecha">${d.fecha?new Date(d.fecha).toLocaleDateString('es-MX'):''}</div>
+        <button class="btn b-dan b-sm" onclick='expulsar("${u.id}",${JSON.stringify(d).replace(/'/g,"\\'")})''>🚫 Expulsar</button>
+      </div>`;
+    });
+    devsHTML += '</div>';
+  }
+
+  // Dispositivo móvil activo (singular — POS móvil)
+  let mobHTML = '';
+  if (u.dispositivoActivo) {
+    const dm = u.dispositivoActivo;
+    mobHTML = `<div class="devs" style="margin-top:${act.length?'6px':'10px'}">
+      <div style="font-size:10px;color:#94a3b8;font-weight:800;text-transform:uppercase;margin-bottom:6px">📱 Dispositivo móvil activo</div>
+      <div class="dev-row">
+        <span>📱</span>
+        <div class="dev-name">${dm.nombre||'Móvil'}</div>
+        <div class="dev-fecha">${dm.fecha?new Date(dm.fecha).toLocaleDateString('es-MX'):''}</div>
+        <button class="btn b-dan b-sm" onclick='expulsarMovil("${u.id}")'>🚫 Expulsar</button>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="u-card ${esAdmin?'admin-card':'cajero-card'}">
+    <div class="u-top">
+      <span style="font-size:28px">${esAdmin?'👑':'🛒'}</span>
+      <div class="u-info">
+        <div class="u-name">${u.id}</div>
+        ${u.farmaciaName?`<div class="u-farmacia">🏪 ${u.farmaciaName}</div>`:''}
+        ${admLink}
+        <div class="u-meta">${rolT} ${estT} ${disT} <span style="font-size:11px;color:#94a3b8">🔑 ${u.password||'—'}</span></div>
+        ${vencBadge ? `<div style="margin-top:6px">${vencBadge}</div>` : ''}
+        ${nota}
+        ${permisosHTML}
+        ${devsHTML}
+        ${mobHTML}
+      </div>
+      <div class="u-acts">
+        <button class="btn b-gho b-sm" onclick='editar("${u.id}")'>✏️ Editar</button>
+        ${esAdmin ? `<button class="btn b-sm" style="background:linear-gradient(135deg,#059669,#047857);color:white" onclick='agregarCajeroPara("${u.id}")'>➕ Cajero</button>` : ''}
+        ${u.activa
+          ? `<button class="btn b-war b-sm" onclick='toggleLic("${u.id}",false)'>🔴 Desactivar</button>`
+          : `<button class="btn b-suc b-sm" onclick='toggleLic("${u.id}",true)'>🟢 Activar</button>`}
+        <button class="btn b-pur b-sm" onclick='cambiarRol("${u.id}","${u.rol||'cajero'}")'>${u.rol==='admin'?'🛒→Cajero':'👑→Admin'}</button>
+        <button class="btn b-dan b-sm" onclick='eliminar("${u.id}")'>🗑️</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── ACCIONES ────────────────────────────────────────────────────────────────
+async function toggleLic(id,val) {
+  if(!confirm((val?'Activar':'Desactivar')+' la licencia de "'+id+'"?'))return;
+  try{await lic.doc(id).update({activa:val});toast((val?'🟢 Activada':'🔴 Desactivada')+': '+id,val?'success':'error');}
+  catch(e){toast('❌ '+e.message,'error');}
+}
+
+async function cambiarRol(id,rolActual) {
+  const nuevo=rolActual==='admin'?'cajero':'admin';
+  if(!confirm('¿Cambiar "'+id+'" a rol '+nuevo+'?'))return;
+  try{await lic.doc(id).update({rol:nuevo});toast('Rol cambiado: '+id+' → '+nuevo,'success');}
+  catch(e){toast('❌ '+e.message,'error');}
+}
+
+async function expulsar(userId,disp) {
+  if(!confirm('¿Expulsar "'+( disp.nombre||'Dispositivo')+'" de "'+userId+'"?\nSe cierra sesión al instante.'))return;
+  try{
+    await lic.doc(userId).update({dispositivosActivos:firebase.firestore.FieldValue.arrayRemove(disp)});
+    toast('🚫 Dispositivo expulsado','success');
+  }catch(e){toast('❌ '+e.message,'error');}
+}
+
+async function expulsarMovil(userId) {
+  if(!confirm('¿Expulsar el dispositivo móvil de "'+userId+'"?\nSe cerrará la sesión del POS móvil al instante.'))return;
+  try{
+    await lic.doc(userId).update({dispositivoActivo:null});
+    toast('🚫 Dispositivo móvil expulsado','success');
+  }catch(e){toast('❌ '+e.message,'error');}
+}
+
+async function eliminar(id) {
+  if(!confirm('⚠️ ¿ELIMINAR "'+id+'"? No se puede deshacer.'))return;
+  if(!confirm('Confirma: ¿eliminar permanentemente "'+id+'"?'))return;
+  try{await lic.doc(id).delete();toast('🗑️ Eliminado: '+id,'info');}
+  catch(e){toast('❌ '+e.message,'error');}
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+let _edit=false,_editId=null;
+
+function togglePermisosModal(rol) {
+  const sec=document.getElementById('seccionPermisos');
+  const campoAdmin=document.getElementById('campoAdminId');
+  sec.style.display = rol==='admin'?'none':'';
+  campoAdmin.style.display = rol==='admin'?'none':'';
+}
+
+function agregarCajeroPara(adminId) {
+  abrirCrear();
+  document.getElementById('mRol').value = 'cajero';
+  document.getElementById('mAdminId').value = adminId;
+  togglePermisosModal('cajero');
+  document.getElementById('mTit').textContent = '➕ Nuevo cajero para: ' + adminId;
+  // Copiar fecha de vencimiento del admin
+  const admin = _todosUsers.find(u => u.id === adminId);
+  if (admin && admin.vencimiento) {
+    document.getElementById('mVencimiento').value = admin.vencimiento;
+    actualizarInfoVencimiento();
+  }
+}
+
+function actualizarInfoVencimiento() {
+  const val = document.getElementById('mVencimiento').value;
+  const info = document.getElementById('mVencimientoInfo');
+  if (!val) { info.style.display='none'; return; }
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const venc = new Date(val + 'T00:00:00');
+  const dias = Math.ceil((venc - hoy)/(1000*60*60*24));
+  info.style.display = '';
+  if (dias < 0) { info.style.color='#dc2626'; info.textContent='💀 Ya venció hace ' + Math.abs(dias) + ' día(s)'; }
+  else if (dias === 0) { info.style.color='#dc2626'; info.textContent='🚨 ¡Vence HOY!'; }
+  else if (dias <= 3) { info.style.color='#dc2626'; info.textContent='🔥 Vence en ' + dias + ' día(s) — MUY PRONTO'; }
+  else if (dias <= 7) { info.style.color='#f59e0b'; info.textContent='⚠️ Vence en ' + dias + ' días'; }
+  else { info.style.color='#16a34a'; info.textContent='✅ Vigente por ' + dias + ' días más'; }
+}
+
+function abrirCrear() {
+  _edit=false;_editId=null;
+  document.getElementById('mTit').textContent='➕ Nuevo usuario';
+  document.getElementById('btnG').textContent='💾 Crear usuario';
+  document.getElementById('mUser').value='';
+  document.getElementById('mUser').disabled=false;
+  document.getElementById('mFarmaciaName').value='';
+  document.getElementById('mPass').value='';
+  document.getElementById('mRol').value='cajero';
+  document.getElementById('mAdminId').value='';
+  document.getElementById('mDisp').value='1';
+  document.getElementById('mNota').value='';
+  document.getElementById('mVencimiento').value='';
+  document.getElementById('mVencimientoInfo').style.display='none';
+  document.getElementById('pCorte').checked=false;
+  document.getElementById('pReportes').checked=false;
+  document.getElementById('pConfig').checked=false;
+  document.getElementById('pInvEdit').checked=true;
+  togglePermisosModal('cajero');
+  document.getElementById('modalU').classList.remove('oculto');
+  setTimeout(()=>document.getElementById('mUser').focus(),100);
+}
+
+async function editar(id) {
+  _edit=true;_editId=id;
+  document.getElementById('mTit').textContent='✏️ Editar: '+id;
+  document.getElementById('btnG').textContent='💾 Guardar cambios';
+  document.getElementById('mUser').value=id;
+  document.getElementById('mUser').disabled=true;
+  try {
+    const s=await lic.doc(id).get();
+    const d=s.data();
+    document.getElementById('mFarmaciaName').value=d.farmaciaName||'';
+    document.getElementById('mPass').value=d.password||'';
+    document.getElementById('mRol').value=d.rol||'cajero';
+    document.getElementById('mAdminId').value=d.adminId||'';
+    document.getElementById('mDisp').value=String(d.dispositivosPermitidos||1);
+    document.getElementById('mNota').value=d.notaPago||'';
+    document.getElementById('mVencimiento').value=d.vencimiento||'';
+    actualizarInfoVencimiento();
+    const p=d.permisos||{};
+    document.getElementById('pCorte').checked=!!p.corte;
+    document.getElementById('pReportes').checked=!!p.reportes;
+    document.getElementById('pConfig').checked=!!p.config;
+    document.getElementById('pInvEdit').checked=p.inventarioEditar!==false;
+    togglePermisosModal(d.rol||'cajero');
+    document.getElementById('modalU').classList.remove('oculto');
+  }catch(e){toast('❌ '+e.message,'error');}
+}
+
+function cerrarModal(){document.getElementById('modalU').classList.add('oculto');}
+document.addEventListener('DOMContentLoaded', () => {
+  const v = document.getElementById('mVencimiento');
+  if(v) v.addEventListener('change', actualizarInfoVencimiento);
+});
+
+async function guardar() {
+  const user     =document.getElementById('mUser').value.trim().toLowerCase().replace(/\s/g,'');
+  const farmName =document.getElementById('mFarmaciaName').value.trim();
+  const pass     =document.getElementById('mPass').value.trim();
+  const rol      =document.getElementById('mRol').value;
+  const adminId  =document.getElementById('mAdminId').value.trim().toLowerCase()||null;
+  const disp     =parseInt(document.getElementById('mDisp').value);
+  const nota     =document.getElementById('mNota').value.trim();
+  const vencimiento = document.getElementById('mVencimiento').value || null;
+  const permisos ={
+    corte:           document.getElementById('pCorte').checked,
+    reportes:        document.getElementById('pReportes').checked,
+    config:          document.getElementById('pConfig').checked,
+    inventarioEditar:document.getElementById('pInvEdit').checked,
+  };
+  if(!user){toast('Escribe un usuario','error');return;}
+  if(!pass){toast('Escribe una contraseña','error');return;}
+  const btn=document.getElementById('btnG');
+  btn.disabled=true;btn.textContent='Guardando...';
+  try {
+    if(_edit){
+      const upd={password:pass,rol,dispositivosPermitidos:disp,permisos};
+      if(farmName)upd.farmaciaName=farmName;
+      if(adminId!==null)upd.adminId=adminId;
+      if(nota!=='')upd.notaPago=nota;
+      upd.vencimiento = vencimiento;
+      await lic.doc(_editId).update(upd);
+      toast('✅ Actualizado: '+_editId,'success');
+    } else {
+      const ex=await lic.doc(user).get();
+      if(ex.exists){toast('❌ Ya existe ese usuario','error');btn.disabled=false;btn.textContent='💾 Crear usuario';return;}
+      await lic.doc(user).set({
+        activa:true,password:pass,rol,
+        farmaciaName:farmName,
+        adminId,
+        permisos,
+        dispositivosPermitidos:disp,
+        dispositivosActivos:[],
+        notaPago:nota,
+        creadoEn:new Date().toISOString(),
+        vencimiento
+      });
+      toast('✅ Usuario creado: '+user,'success');
+    }
+    cerrarModal();
+  }catch(e){toast('❌ '+e.message,'error');}
+  btn.disabled=false;
+  btn.textContent=_edit?'💾 Guardar cambios':'💾 Crear usuario';
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+// ─── ALERTAS DE VOZ ──────────────────────────────────────────────────────────
+function hablar(texto) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = 'es-MX';
+  u.rate = 0.9;
+  u.pitch = 1;
+  window.speechSynthesis.speak(u);
+}
+
+function cerrarAlertaVoz() {
+  document.getElementById('alertaVoz').style.display = 'none';
+  window.speechSynthesis.cancel();
+}
+
+function verificarVencimientosAdmin(docs) {
+  // Solo mostrar una vez por sesión
+  if (sessionStorage.getItem('_alerta_venc_admin')) return;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const porVencer = docs.filter(u => {
+    if (!u.vencimiento) return false;
+    const d = Math.ceil((new Date(u.vencimiento+'T00:00:00') - hoy)/(1000*60*60*24));
+    return d >= 0 && d <= 3;
+  });
+  const vencidos = docs.filter(u => {
+    if (!u.vencimiento) return false;
+    const d = Math.ceil((new Date(u.vencimiento+'T00:00:00') - hoy)/(1000*60*60*24));
+    return d < 0;
+  });
+  if (!porVencer.length && !vencidos.length) return;
+  sessionStorage.setItem('_alerta_venc_admin', '1');
+
+  let msgs = [];
+  let textoVoz = '';
+  if (vencidos.length) {
+    vencidos.forEach(u => {
+      const dias = Math.abs(Math.ceil((new Date(u.vencimiento+'T00:00:00') - hoy)/(1000*60*60*24)));
+      msgs.push(`💀 <strong>${u.farmaciaName||u.id}</strong> — venció hace ${dias} día(s)`);
+    });
+    textoVoz += `Atención. ${vencidos.length} suscripción${vencidos.length>1?'es han':'ha'} vencido. `;
+  }
+  if (porVencer.length) {
+    porVencer.forEach(u => {
+      const dias = Math.ceil((new Date(u.vencimiento+'T00:00:00') - hoy)/(1000*60*60*24));
+      const txt = dias === 0 ? '¡HOY!' : `en ${dias} día(s)`;
+      msgs.push(`🔥 <strong>${u.farmaciaName||u.id}</strong> — vence ${txt}`);
+    });
+    textoVoz += `${porVencer.length} suscripción${porVencer.length>1?'es vencen':'vence'} pronto. Revisa el panel.`;
+  }
+
+  const div = document.getElementById('alertaVoz');
+  const msg = document.getElementById('alertaVozMsg');
+  msg.innerHTML = '🔔 <strong>Suscripciones por vencer:</strong><br><br>' + msgs.join('<br>');
+  div.style.display = 'block';
+  setTimeout(() => hablar(textoVoz), 800);
+}
+
+let _tt;
+function toast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='show '+type;
+  clearTimeout(_tt);_tt=setTimeout(()=>t.className='',3500);
+}
+
+// ─── PROTECCIÓN ──────────────────────────────────────────────────────────────
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{
+  if(e.key==='F12'){e.preventDefault();return;}
+  if((e.ctrlKey||e.metaKey)&&e.shiftKey&&['I','J','C'].includes(e.key.toUpperCase()))e.preventDefault();
+},true);
+</script>
+</body>
+</html>
