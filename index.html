@@ -1114,34 +1114,34 @@ function toggleTop10Mob() {
 }
 
 function renderInventario() {
-  const q = (document.getElementById('invSearch')?.value || '').toLowerCase();
-  const list = q
-    ? products.filter(p => p.name.toLowerCase().includes(q) || (p.barcode || '').includes(q))
-    : products;
-
-  const el = document.getElementById('invList');
+  var q = (document.getElementById('invSearch') ? document.getElementById('invSearch').value : '').toLowerCase();
+  var list = q ? products.filter(function(p){ return p.name.toLowerCase().indexOf(q)>=0||(p.barcode||'').indexOf(q)>=0; }) : products;
+  var el = document.getElementById('invList');
   if (!el) return;
-
   if (!list.length) {
-    el.innerHTML = `<div class="empty"><div class="icon">📦</div><p>${products.length ? 'Sin resultados' : 'Sin productos'}</p></div>`;
+    el.innerHTML = '<div class="empty"><div class="icon">📦</div><p>'+(products.length?'SIN RESULTADOS':'SIN PRODUCTOS')+'</p></div>';
     return;
   }
-
-  el.innerHTML = `<div class="card">${list.map(p => {
-    const stockTag = p.stock === 0
-      ? '<span class="tag tag-red">Sin stock</span>'
-      : p.stock <= 3
-      ? `<span class="tag tag-orange">⚠ ${p.stock} piezas</span>`
-      : `<span class="tag tag-green">${p.stock} piezas</span>`;
-    return `<div class="product-item">
-      <div style="flex:1">
-        <div class="product-name">${p.name}</div>
-        <div class="product-meta">${p.barcode ? `Cód: ${p.barcode} · ` : ''}Compra: $${p.buyPrice.toFixed(2)} · ${stockTag}</div>
-      </div>
-      <div class="product-price">$${p.sellPrice.toFixed(2)}</div>
-    </div>`;
-  }).join('')}</div>`;
+  var rows = '';
+  for (var i=0; i<list.length; i++) {
+    var p = list[i];
+    var stTag = p.stock===0
+      ? '<span class="tag tag-red">SIN STOCK</span>'
+      : p.stock<=5
+      ? '<span class="tag tag-orange">&#9888; '+p.stock+' PZS</span>'
+      : '<span class="tag tag-green">'+p.stock+' PZS</span>';
+    rows += '<div class="product-item">';
+    rows += '<div style="flex:1;cursor:pointer" onclick="abrirModalProd(\''+p.id+'\')"><div class="product-name">'+p.name+'</div><div class="product-meta">'+(p.barcode?'Cód: '+p.barcode+' · ':'')+'$'+p.buyPrice.toFixed(2)+' · '+stTag+'</div></div>';
+    rows += '<div style="display:flex;align-items:center;gap:8px"><div class="product-price">$'+p.sellPrice.toFixed(2)+'</div>';
+    rows += '<button onclick="abrirModalProd(\''+p.id+'\')" style="background:var(--rose-light);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--rose);font-size:13px;font-weight:700">✏️</button>';
+    rows += '</div></div>';
+  }
+  el.innerHTML = '<div class="card">'+rows+'</div>';
 }
+
+
+
+
 
 // ─── VENTA MÓVIL ──────────────────────────────────────────────────────────────
 function searchVenta() {
@@ -2308,33 +2308,7 @@ function guardarProdModal() {
 // ══════════════════════════════════════════════════════════════════
 // OVERRIDE renderInventario to add edit button + modal
 // ══════════════════════════════════════════════════════════════════
-function renderInventario() {
-  var q = (document.getElementById('invSearch') ? document.getElementById('invSearch').value : '').toLowerCase();
-  var list = q ? products.filter(function(p){ return p.name.toLowerCase().includes(q)||(p.barcode||'').includes(q); }) : products;
-  var el = document.getElementById('invList');
-  if (!el) return;
-  if (!list.length) {
-    el.innerHTML = '<div class="empty"><div class="icon">📦</div><p>'+(products.length?'SIN RESULTADOS':'SIN PRODUCTOS')+'</p></div>';
-    return;
-  }
-  el.innerHTML = '<div class="card">'+list.map(function(p){
-    var stTag = p.stock===0
-      ? '<span class="tag tag-red">SIN STOCK</span>'
-      : p.stock<=3
-      ? '<span class="tag tag-orange">⚠ '+p.stock+' PZS</span>'
-      : '<span class="tag tag-green">'+p.stock+' PZS</span>';
-    return '<div class="product-item">'
-      +'<div style="flex:1;cursor:pointer" onclick="abrirModalProd(''+p.id+'')">'
-      +'<div class="product-name">'+p.name+'</div>'
-      +'<div class="product-meta">'+(p.barcode?'Cód: '+p.barcode+' · ':'')+'$'+p.buyPrice.toFixed(2)+' · '+stTag+'</div>'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px">'
-      +'<div class="product-price">$'+p.sellPrice.toFixed(2)+'</div>'
-      +'<button onclick="abrirModalProd(''+p.id+'')" style="background:var(--rose-light);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--rose);font-size:13px;font-weight:700;">✏️</button>'
-      +'</div>'
-      +'</div>';
-  }).join('')+'</div>';
-}
+
 
 // ══════════════════════════════════════════════════════════════════
 // PDF TICKET
