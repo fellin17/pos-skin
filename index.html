@@ -2074,14 +2074,13 @@ function borrarTodoMovil() {
 // ══════════════════════════════════════════════════════════════════
 let _usuario = null;
 
-async function doLogin() {
+function doLogin() {
   var u = (document.getElementById('liUser').value || '').trim().toLowerCase().replace(/\s/g,'');
   var p = (document.getElementById('liPass').value || '').trim();
   var errEl = document.getElementById('liErr');
-  var btn   = document.getElementById('btnEntrar');
 
+  // Limpiar error anterior
   errEl.style.display = 'none';
-  errEl.textContent   = '';
 
   if (!u || !p) {
     errEl.textContent = 'ESCRIBE USUARIO Y CONTRASEÑA';
@@ -2089,7 +2088,27 @@ async function doLogin() {
     return;
   }
 
-  if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
+  // Mostrar que está cargando
+  var btn = document.getElementById('btnEntrar');
+  if (btn) { btn.textContent = '⏳ Cargando...'; btn.disabled = true; }
+
+  // Función para abrir la app directamente
+  function abrirApp(nombreNegocio) {
+    _usuario = u;
+    sessionStorage.setItem('pos_session', u);
+    iniciarFirebaseUser(u);
+    if (nombreNegocio) {
+      cfg.bizName = nombreNegocio;
+      var h = document.getElementById('hdrName');
+      if (h) h.textContent = nombreNegocio;
+    }
+    loadData();
+    document.getElementById('loginScreen').style.display = 'none';
+    showTab('venta');
+    setTimeout(avisarStockBajo, 2500);
+    toast('¡BIENVENIDA! 🌸');
+    if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
+  }
 
   function mostrarError(msg) {
     errEl.textContent = msg;
@@ -2097,58 +2116,37 @@ async function doLogin() {
     if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
   }
 
-  function entrarApp() {
-    _usuario = u;
-    sessionStorage.setItem('pos_session', u);
-    iniciarFirebaseUser(u);
-    loadData().then(function(){
-      document.getElementById('loginScreen').style.display = 'none';
-      showTab('venta');
-      toast('¡BIENVENIDA! 🌸');
-      setTimeout(avisarStockBajo, 2500);
-      if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-    }).catch(function(){
-      document.getElementById('loginScreen').style.display = 'none';
-      showTab('venta');
-      toast('¡BIENVENIDA! 🌸');
-      if (btn) { btn.textContent = '✨ ENTRAR'; btn.disabled = false; }
-    });
-  }
+  // Verificar en Firebase con timeout de 5 segundos
+  var entro = false;
 
-  // INTENTO 1: Verificar en Firebase
   if (fbReady && fbLic) {
-    try {
-      if (btn) btn.textContent = '☁️ Conectando...';
-      var snap = null;
-      try {
-        snap = await Promise.race([
-          fbLic.doc(u).get(),
-          new Promise(function(_, r){ setTimeout(function(){ r(new Error('timeout')); }, 8000); })
-        ]);
-      } catch(netErr) {
-        // Sin conexión - intentar modo offline
-        if (btn) btn.textContent = '📱 Sin red, verificando...';
-        var usersLocal = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
-        var okLocal = usersLocal.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
-        if (okLocal) { entrarApp(); return; }
-        mostrarError('⚠️ Sin conexión a internet. Verifica tu red.');
-        return;
+    var timer = setTimeout(function() {
+      if (!entro) {
+        // Timeout - intentar con credenciales locales
+        var local = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
+        var ok = local.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
+        if (ok) { entro = true; abrirApp(''); }
+        else { mostrarError('⚠️ Sin respuesta del servidor. Verifica tu conexión.'); }
       }
+    }, 5000);
 
-      if (!snap || !snap.exists) {
-        mostrarError('❌ Usuario "' + u + '" no encontrado. Verifica con tu administrador.');
+    fbLic.doc(u).get().then(function(snap) {
+      clearTimeout(timer);
+      if (entro) return;
+      entro = true;
+
+      if (!snap.exists) {
+        mostrarError('❌ Usuario no encontrado. Pide a tu administrador que te registre.');
         return;
       }
 
       var lic = snap.data();
 
-      // Verificar contraseña
       if (!lic.password || lic.password !== p) {
         mostrarError('❌ Contraseña incorrecta.');
         return;
       }
 
-      // Verificar activa
       if (lic.activa === false) {
         mostrarError('🔴 Licencia inactiva. Contacta al administrador.');
         return;
@@ -2157,48 +2155,36 @@ async function doLogin() {
       // Verificar vencimiento
       if (lic.vencimiento) {
         try {
-          var hoy  = new Date(); hoy.setHours(0,0,0,0);
-          // Support both YYYY-MM-DD and DD/MM/YYYY formats
-          var vStr = lic.vencimiento;
-          if (vStr.includes('/')) {
-            var parts = vStr.split('/');
-            vStr = parts[2] + '-' + parts[1] + '-' + parts[0];
-          }
-          var venc = new Date(vStr + 'T00:00:00');
+          var hoy = new Date(); hoy.setHours(0,0,0,0);
+          var vs = lic.vencimiento;
+          if (vs.includes('/')) { var pts = vs.split('/'); vs = pts[2]+'-'+pts[1]+'-'+pts[0]; }
+          var venc = new Date(vs);
           if (!isNaN(venc) && venc < hoy) {
-            var dias = Math.ceil((hoy - venc) / (1000*60*60*24));
-            mostrarError('💀 Suscripción vencida hace ' + dias + ' día(s). Comunícate con tu administrador.');
+            var dias = Math.ceil((hoy-venc)/86400000);
+            mostrarError('💀 Suscripción vencida hace '+dias+' día(s). Renueva con tu administrador.');
             return;
           }
-          if (!isNaN(venc)) {
-            var restantes = Math.ceil((venc - hoy) / (1000*60*60*24));
-            if (restantes <= 5) toast('⚠️ TU SUSCRIPCIÓN VENCE EN ' + restantes + ' DÍA(S)', 'error');
-          }
-        } catch(dateErr) { /* si la fecha falla, no bloquear */ }
+        } catch(e) {}
       }
 
-      // Poner nombre del negocio
-      if (lic.farmaciaName) {
-        cfg.bizName = lic.farmaciaName;
-        var hEl = document.getElementById('hdrName');
-        if (hEl) hEl.textContent = cfg.bizName;
-      }
+      abrirApp(lic.farmaciaName || '');
 
-      // ✅ LOGIN EXITOSO
-      entrarApp();
+    }).catch(function(e) {
+      clearTimeout(timer);
+      if (entro) return;
+      entro = true;
+      // Firebase falló - intentar local
+      var local2 = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
+      var ok2 = local2.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
+      if (ok2) { abrirApp(''); }
+      else { mostrarError('⚠️ Error de conexión: '+e.message); }
+    });
 
-    } catch(e) {
-      // Error inesperado - fallback offline
-      var usersOff = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
-      var okOff = usersOff.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
-      if (okOff) { entrarApp(); }
-      else { mostrarError('⚠️ Error al conectar. Intenta de nuevo.'); }
-    }
   } else {
-    // Sin Firebase - modo local
-    var usersLoc = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
-    var okLoc = usersLoc.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
-    if (okLoc) { entrarApp(); }
+    // Sin Firebase - solo credenciales locales
+    var localU = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
+    var okU = localU.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
+    if (okU) { entro = true; abrirApp(''); }
     else { mostrarError('❌ Usuario o contraseña incorrectos.'); }
   }
 }
