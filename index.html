@@ -440,7 +440,13 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
     <div class="input-group"><label>Código de barras</label>
       <div style="display:flex;gap:8px">
         <input class="input" id="mpCod" placeholder="Escanea o escribe" style="flex:1">
-        <button onclick="startScan('barcode')" style="background:var(--rose);color:white;border:none;border-radius:10px;padding:0 14px;font-size:20px;cursor:pointer;">📷</button>
+        <button onclick="startScanModal()" style="background:var(--rose);color:white;border:none;border-radius:10px;padding:0 14px;font-size:20px;cursor:pointer;touch-action:manipulation;">📷</button>
+      </div>
+      <div id="modalScanBox" style="display:none;margin-top:10px;border-radius:12px;overflow:hidden;background:#000;position:relative;">
+        <video id="modalScanVideo" style="width:100%;height:220px;object-fit:cover;display:block" autoplay playsinline muted></video>
+        <canvas id="modalScanCanvas" style="display:none"></canvas>
+        <button onclick="stopScanModal()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:99px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer;">✕ Cerrar</button>
+        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.55);color:white;font-size:11px;padding:4px 14px;border-radius:99px;white-space:nowrap">Apunta al código de barras</div>
       </div></div>
     <div class="input-group"><label>Nombre del producto *</label>
       <input class="input" id="mpNom" placeholder="Nombre del producto"></div>
@@ -807,7 +813,7 @@ var _origShowTab=showTab;function showTab(tab){['scanner','inventario','venta','
 function cargarConfig(){var el=function(id){return document.getElementById(id);};if(el('cfgBizName'))el('cfgBizName').value=cfg.bizName||'';if(el('cfgPhone'))el('cfgPhone').value=cfg.phone||'';if(el('cfgAddress'))el('cfgAddress').value=cfg.address||'';if(el('cfgRfc'))el('cfgRfc').value=cfg.rfc||'';if(el('cfgMsg'))el('cfgMsg').value=cfg.msg||'';if(el('cfgUsuario'))el('cfgUsuario').textContent=_usuario||'admin';}
 function guardarConfig(){cfg.bizName=(document.getElementById('cfgBizName').value||'').trim().toUpperCase()||'MI NEGOCIO';cfg.phone=(document.getElementById('cfgPhone').value||'').trim();cfg.address=(document.getElementById('cfgAddress').value||'').trim();cfg.rfc=(document.getElementById('cfgRfc').value||'').trim();cfg.msg=(document.getElementById('cfgMsg').value||'').trim()||'¡Gracias por su compra!';saveData();document.getElementById('hdrName').textContent=cfg.bizName;toast('✅ CONFIGURACIÓN GUARDADA');}
 var _editProdId=null;function abrirModalProd(id){_editProdId=id||null;var p=id?products.find(function(x){return x.id===id;}):null;document.getElementById('modalProdTitle').textContent=p?'✏️ Editar Producto':'➕ Agregar Producto';document.getElementById('mpCod').value=p?(p.barcode||''):'';document.getElementById('mpNom').value=p?(p.name||''):'';document.getElementById('mpCom').value=p?(p.buyPrice||''):'';document.getElementById('mpVen').value=p?(p.sellPrice||''):'';document.getElementById('mpSto').value=p?(p.stock||''):'';document.getElementById('modalProd').style.display='flex';setTimeout(function(){document.getElementById('mpNom').focus();},100);}
-function cerrarModalProd(){document.getElementById('modalProd').style.display='none';_editProdId=null;}
+function cerrarModalProd(){stopScanModal();document.getElementById('modalProd').style.display='none';_editProdId=null;}
 function guardarProdModal(){var nom=(document.getElementById('mpNom').value||'').trim().toUpperCase();var cod=(document.getElementById('mpCod').value||'').trim();var com=parseFloat(document.getElementById('mpCom').value)||0;var ven=parseFloat(document.getElementById('mpVen').value)||0;var sto=parseInt(document.getElementById('mpSto').value)||0;if(!nom){toast('EL NOMBRE ES REQUERIDO','error');return;}
 if(!ven){toast('EL PRECIO DE VENTA ES REQUERIDO','error');return;}
 var entry={id:_editProdId||Date.now().toString(),barcode:cod,name:nom,buyPrice:com,sellPrice:ven,stock:sto};if(_editProdId){products=products.map(function(p){return p.id===_editProdId?entry:p;});toast('✅ PRODUCTO ACTUALIZADO');}else{products.push(entry);toast('✅ PRODUCTO AGREGADO');}
@@ -825,6 +831,80 @@ if(!cart.length){toast('EL CARRITO ESTÁ VACÍO','error');return;}
 var total=cart.reduce(function(s,i){return s+i.sellPrice*i.qty;},0);var profit=cart.reduce(function(s,i){return s+(i.sellPrice-(i.buyPrice||0))*i.qty;},0);var sale={id:Date.now().toString(),date:new Date().toISOString(),customer:customer,items:cart.map(function(i){return Object.assign({},i);}),total:total,profit:profit,inCut:false};products=products.map(function(p){var ci=cart.find(function(i){return i.id===p.id;});return ci?Object.assign({},p,{stock:p.stock-ci.qty}):p;});sales.push(sale);await saveData();hablarTotal(total);generarTicketPDF(sale);cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();toast('✅ VENTA GUARDADA');}
 function arrancarApp(){var sess=sessionStorage.getItem('pos_session');if(sess){_usuario=sess;iniciarFirebaseUser(sess);loadData().then(function(){document.getElementById('loginScreen').style.display='none';showTab('venta');setTimeout(avisarStockBajo,2500);});}
 var bizEl=document.getElementById('loginBizName');if(bizEl&&cfg.bizName)bizEl.textContent=cfg.bizName;}
-loadData().then(function(){arrancarApp();}).catch(function(){arrancarApp();});</script>
+loadData().then(function(){arrancarApp();}).catch(function(){arrancarApp();});
+// ── ESCÁNER INLINE EN MODAL AGREGAR PRODUCTO ──
+var _mStream=null, _mScanning=false, _mZxReader=null;
+
+function startScanModal(){
+  var box=document.getElementById('modalScanBox');
+  var video=document.getElementById('modalScanVideo');
+  if(!box||!video) return;
+  stopScanModal();
+  box.style.display='block';
+
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    toast('Tu navegador no soporta cámara','error'); box.style.display='none'; return;
+  }
+
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}})
+  .then(function(stream){
+    _mStream=stream; _mScanning=true;
+    video.srcObject=stream;
+    video.play().catch(function(){});
+
+    if(window.ZXing){
+      try{
+        _mZxReader=new ZXing.BrowserMultiFormatReader();
+        _mZxReader.decodeFromVideoElement(video, function(result, err){
+          if(result && _mScanning){
+            document.getElementById('mpCod').value=result.getText();
+            stopScanModal();
+            toast('✅ Código escaneado','success');
+          }
+        });
+        return;
+      }catch(e){}
+    }
+
+    // Fallback: BarcodeDetector (Chrome Android nativo)
+    if('BarcodeDetector' in window){
+      var det=new BarcodeDetector({formats:['qr_code','ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','data_matrix']});
+      function mLoop(){
+        if(!_mScanning) return;
+        det.detect(video).then(function(codes){
+          if(codes.length>0 && _mScanning){
+            document.getElementById('mpCod').value=codes[0].rawValue;
+            stopScanModal();
+            toast('✅ Código escaneado','success');
+          } else if(_mScanning){ setTimeout(mLoop,200); }
+        }).catch(function(){ if(_mScanning) setTimeout(mLoop,300); });
+      }
+      setTimeout(mLoop,400);
+    } else {
+      toast('Escáner no disponible en este navegador. Escribe el código manualmente.','error');
+      stopScanModal();
+    }
+  })
+  .catch(function(err){
+    box.style.display='none';
+    var msg = err.name==='NotAllowedError'
+      ? 'Permiso denegado. Ve a Configuración del navegador → Permisos del sitio → Cámara y actívala.'
+      : err.name==='NotFoundError' ? 'No se detectó cámara en este dispositivo.'
+      : 'No se pudo abrir la cámara: '+err.message;
+    toast(msg,'error');
+  });
+}
+
+function stopScanModal(){
+  _mScanning=false;
+  if(_mZxReader){ try{_mZxReader.reset();}catch(e){} _mZxReader=null; }
+  if(_mStream){ _mStream.getTracks().forEach(function(t){t.stop();}); _mStream=null; }
+  var box=document.getElementById('modalScanBox');
+  var video=document.getElementById('modalScanVideo');
+  if(box) box.style.display='none';
+  if(video){ video.srcObject=null; }
+}
+
+</script>
 </body>
 </html>
