@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Naye Móvil">
 <title>Naye POS Móvil</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -783,7 +783,7 @@ async function loadData() {
     try {
       const snap = await Promise.race([
         fbDoc.get(),
-        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 6000))
+        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 15000))
       ]);
       if (snap.exists) {
         applyData(snap.data());
@@ -791,7 +791,7 @@ async function loadData() {
         setSyncStatus('🟢 Sincronizado');
       }
     } catch(e) {
-      setSyncStatus('🔴 Sin conexión');
+      setSyncStatus('🔄 Sin conexión - reconectando...'); setTimeout(function(){ if(fbDoc) fbDoc.get().then(function(s){ if(s.exists) applyData(s.data()); setSyncStatus('🟢 En línea'); }).catch(function(){ setSyncStatus('🔴 Sin conexión'); }); }, 5000);
     }
 
     // Escuchar cambios en tiempo real
@@ -2122,13 +2122,13 @@ function doLogin() {
   if (fbReady && fbLic) {
     var timer = setTimeout(function() {
       if (!entro) {
-        // Timeout - intentar con credenciales locales
+        // Timeout 10s - intentar con credenciales locales
         var local = (cfg && cfg.users) ? cfg.users : [{user:'admin',pass:'1234'}];
         var ok = local.find(function(x){ return x.user.toLowerCase()===u && x.pass===p; });
         if (ok) { entro = true; abrirApp(''); }
         else { mostrarError('⚠️ Sin respuesta del servidor. Verifica tu conexión.'); }
       }
-    }, 5000);
+    }, 10000);
 
     fbLic.doc(u).get().then(function(snap) {
       clearTimeout(timer);
