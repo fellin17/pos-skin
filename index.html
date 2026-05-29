@@ -483,7 +483,90 @@ async function saveData(){const data={products,sales,cuts,cfg};try{localStorage.
 if(fbReady&&fbDoc)fbDoc.set(data).catch(()=>{});}
 function setSyncStatus(msg){document.getElementById('syncStatus').textContent=msg;}
 function showTab(tab){['scanner','inventario','venta','notas','agregar'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'':'none';});document.querySelectorAll('.nav button').forEach((btn,i)=>{btn.classList.toggle('active',['scanner','inventario','venta','notas','agregar'][i]===tab);});stopScan();if(tab==='venta')updateCartUI();if(tab==='agregar')renderUltimosProductos();}
-let scanMode='multi';let _stream=null;let _scanning=false;let _zxReader=null;
+let scanMode='multi';let _stream=null;let _scanning=false;
+
+// ── FUNCIÓN UNIVERSAL DE ESCANEO (canvas frame-by-frame, máxima sensibilidad) ──
+function _scanLoop(video, canvas, onCode){
+  if(!_scanning) return;
+  if(video.readyState < 2 || video.videoWidth === 0){
+    setTimeout(function(){ _scanLoop(video, canvas, onCode); }, 100);
+    return;
+  }
+  var w = video.videoWidth, h = video.videoHeight;
+  canvas.width = w; canvas.height = h;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, w, h);
+
+  // Método 1: ZXing con TRY_HARDER (máxima sensibilidad)
+  if(window.ZXing){
+    try{
+      var hints = new Map();
+      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+        ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+        ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.ITF,
+        ZXing.BarcodeFormat.DATA_MATRIX, ZXing.BarcodeFormat.CODABAR,
+        ZXing.BarcodeFormat.PDF_417
+      ]);
+      var reader = new ZXing.BrowserMultiFormatReader(hints);
+      var imgData = ctx.getImageData(0, 0, w, h);
+      var lum = new ZXing.RGBLuminanceSource(imgData.data, w, h);
+      var bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+      var result = reader.decodeBitmap(bmp);
+      if(result){ onCode(result.getText()); return; }
+    }catch(e){}
+
+    // Segunda pasada: imagen más brillante (ayuda con códigos mal iluminados)
+    try{
+      ctx.filter = 'contrast(1.6) brightness(1.2)';
+      ctx.drawImage(video, 0, 0, w, h);
+      ctx.filter = 'none';
+      var hints2 = new Map();
+      hints2.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      var reader2 = new ZXing.BrowserMultiFormatReader(hints2);
+      var imgData2 = ctx.getImageData(0, 0, w, h);
+      var lum2 = new ZXing.RGBLuminanceSource(imgData2.data, w, h);
+      var bmp2 = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum2));
+      var result2 = reader2.decodeBitmap(bmp2);
+      if(result2){ onCode(result2.getText()); return; }
+    }catch(e){}
+  }
+
+  // Método 2: BarcodeDetector nativo Chrome Android (muy rápido y preciso)
+  if('BarcodeDetector' in window){
+    var det = new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code','itf','data_matrix','codabar','pdf417']});
+    det.detect(canvas).then(function(codes){
+      if(!_scanning) return;
+      if(codes.length > 0){ onCode(codes[0].rawValue); }
+      else { setTimeout(function(){ _scanLoop(video, canvas, onCode); }, 150); }
+    }).catch(function(){
+      if(_scanning) setTimeout(function(){ _scanLoop(video, canvas, onCode); }, 150);
+    });
+    return;
+  }
+
+  // Reintentar si no hay método disponible
+  setTimeout(function(){ _scanLoop(video, canvas, onCode); }, 150);
+}
+
+function _startCamera(constraints, onStream, onError){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    onError({name:'NotSupported', message:'Tu navegador no soporta cámara. Usa Chrome.'}); return;
+  }
+  navigator.mediaDevices.getUserMedia(constraints)
+    .then(onStream)
+    .catch(onError);
+}
+
+function _camError(err){
+  var msg = err.name==='NotAllowedError'
+    ? 'Permiso denegado. En Chrome: toca ⋮ → Configuración → Configuración del sitio → Cámara → permite fellin17.github.io'
+    : err.name==='NotFoundError' ? 'No se detectó cámara.'
+    : 'No se pudo abrir la cámara: '+(err.message||err.name);
+  toast(msg,'error');
+}
 
 function startScan(mode){
   scanMode=mode;
@@ -496,69 +579,28 @@ function startScan(mode){
   document.getElementById('scanResultCard').style.display='none';
   box.innerHTML='<video id="scanVideo" style="width:100%;height:260px;object-fit:cover;display:block;border-radius:8px" autoplay playsinline muted></video><canvas id="scanCanvas" style="display:none"></canvas>';
 
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    toast('Tu navegador no soporta cámara. Usa Chrome o Firefox.','error');
-    card.style.display='none'; return;
-  }
-
-  var constraints={video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}};
-  navigator.mediaDevices.getUserMedia(constraints)
-  .then(function(stream){
-    _stream=stream; _scanning=true;
-    var video=document.getElementById('scanVideo');
-    video.srcObject=stream;
-    video.play().catch(function(){});
-    // Intentar con ZXing primero (más compatible)
-    if(window.ZXing){
-      try{
-        _zxReader=new ZXing.BrowserMultiFormatReader();
-        _zxReader.decodeFromVideoElement(video, function(result,err){
-          if(result&&_scanning){ handleCode(result.getText()); }
-        });
-      }catch(e){ _fallbackScan(video); }
-    } else {
-      video.onloadedmetadata=function(){ _fallbackScan(video); };
-    }
-  })
-  .catch(function(err){
-    var msg=err.name==='NotAllowedError'?'Permiso de cámara denegado. Ve a Configuración del navegador y permite la cámara para este sitio.':
-            err.name==='NotFoundError'?'No se encontró cámara en este dispositivo.':
-            'No se pudo abrir la cámara: '+err.message;
-    toast(msg,'error');
-    card.style.display='none';
-  });
-}
-
-function _fallbackScan(video){
-  if(!_scanning) return;
-  if('BarcodeDetector' in window){
-    var det=new BarcodeDetector({formats:['qr_code','ean_13','ean_8','code_128','code_39','upc_a','upc_e','data_matrix','pdf417']});
-    function loop(){
-      if(!_scanning) return;
-      det.detect(video).then(function(codes){
-        if(codes.length>0&&_scanning){ handleCode(codes[0].rawValue); }
-        else if(_scanning){ setTimeout(loop,200); }
-      }).catch(function(){ if(_scanning) setTimeout(loop,300); });
-    }
-    setTimeout(loop,400);
-  } else {
-    function loopCanvas(){
-      if(!_scanning) return;
+  _startCamera(
+    {video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},
+    function(stream){
+      _stream=stream; _scanning=true;
+      var video=document.getElementById('scanVideo');
       var canvas=document.getElementById('scanCanvas');
-      var v=document.getElementById('scanVideo');
-      if(!canvas||!v||v.readyState<2){ setTimeout(loopCanvas,200); return; }
-      canvas.width=v.videoWidth||640; canvas.height=v.videoHeight||480;
-      var ctx=canvas.getContext('2d');
-      ctx.drawImage(v,0,0);
-      setTimeout(loopCanvas,300);
-    }
-    setTimeout(loopCanvas,500);
-  }
+      video.setAttribute('autoplay',''); video.setAttribute('playsinline',''); video.muted=true;
+      video.srcObject=stream;
+      video.play().catch(function(){});
+      var attempts=0;
+      var wait=setInterval(function(){
+        attempts++;
+        if(video.readyState>=2&&video.videoWidth>0){ clearInterval(wait); _scanLoop(video,canvas,handleCode); }
+        if(attempts>40) clearInterval(wait);
+      },100);
+    },
+    function(err){ _camError(err); card.style.display='none'; }
+  );
 }
 
 function stopScan(){
   _scanning=false;
-  if(_zxReader){ try{_zxReader.reset();}catch(e){} _zxReader=null; }
   if(_stream){ _stream.getTracks().forEach(function(t){t.stop();}); _stream=null; }
   var card=document.getElementById('scannerCard');
   var box=document.getElementById('scannerBox');
@@ -833,8 +875,8 @@ var total=cart.reduce(function(s,i){return s+i.sellPrice*i.qty;},0);var profit=c
 function arrancarApp(){var sess=sessionStorage.getItem('pos_session');if(sess){_usuario=sess;iniciarFirebaseUser(sess);loadData().then(function(){document.getElementById('loginScreen').style.display='none';showTab('venta');setTimeout(avisarStockBajo,2500);});}
 var bizEl=document.getElementById('loginBizName');if(bizEl&&cfg.bizName)bizEl.textContent=cfg.bizName;}
 loadData().then(function(){arrancarApp();}).catch(function(){arrancarApp();});
-// ── ESCÁNER INLINE EN MODAL AGREGAR PRODUCTO ──
-var _mStream=null, _mScanning=false;
+// ── ESCÁNER MODAL (usa _scanLoop universal) ──
+var _mStream=null;
 
 function startScanModal(){
   var box=document.getElementById('modalScanBox');
@@ -843,106 +885,31 @@ function startScanModal(){
   if(!box||!video||!canvas) return;
   stopScanModal();
   box.style.display='block';
-
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    toast('Tu navegador no soporta cámara','error'); box.style.display='none'; return;
-  }
-
-  navigator.mediaDevices.getUserMedia({
-    video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}
-  })
-  .then(function(stream){
-    _mStream=stream;
-    _mScanning=true;
-    video.setAttribute('autoplay','');
-    video.setAttribute('playsinline','');
-    video.setAttribute('muted','');
-    video.muted = true;
-    video.srcObject = stream;
-    // Forzar play en Android
-    var playPromise = video.play();
-    if(playPromise !== undefined){
-      playPromise.catch(function(){
-        video.play().catch(function(){});
-      });
-    }
-    // Esperar frames reales antes de escanear
-    var attempts = 0;
-    var waitVideo = setInterval(function(){
-      attempts++;
-      if(video.readyState >= 2 && video.videoWidth > 0){
-        clearInterval(waitVideo);
-        _mScanLoop(video, canvas);
-      }
-      if(attempts > 30) clearInterval(waitVideo); // timeout 3s
-    }, 100);
-  })
-  .catch(function(err){
-    box.style.display='none';
-    var msg = err.name==='NotAllowedError'
-      ? 'Permiso denegado. En Chrome: toca los 3 puntos → Configuración → Configuración del sitio → Cámara → permite fellin17.github.io'
-      : err.name==='NotFoundError' ? 'No se detectó cámara en este dispositivo.'
-      : 'No se pudo abrir la cámara: '+err.message;
-    toast(msg,'error');
-  });
+  _startCamera(
+    {video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}},
+    function(stream){
+      _mStream=stream; _scanning=true;
+      video.setAttribute('autoplay',''); video.setAttribute('playsinline',''); video.muted=true;
+      video.srcObject=stream;
+      video.play().catch(function(){});
+      var attempts=0;
+      var wait=setInterval(function(){
+        attempts++;
+        if(video.readyState>=2&&video.videoWidth>0){
+          clearInterval(wait);
+          _scanLoop(video, canvas, function(code){
+            beepScanner();
+            document.getElementById('mpCod').value=code;
+            stopScanModal();
+            toast('✅ Código: '+code,'success');
+          });
+        }
+        if(attempts>40) clearInterval(wait);
+      },100);
+    },
+    function(err){ box.style.display='none'; _camError(err); }
+  );
 }
-
-function _mScanLoop(video, canvas){
-  if(!_mScanning) return;
-  if(video.readyState < 2 || video.videoWidth === 0){
-    setTimeout(function(){ _mScanLoop(video, canvas); }, 150);
-    return;
-  }
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  var ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  // Método 1: ZXing con canvas (más compatible en Android)
-  if(window.ZXing){
-    try{
-      var hints = new Map();
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-      var reader = new ZXing.BrowserMultiFormatReader(hints);
-      var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      var luminance = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
-      var bitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminance));
-      var result = reader.decodeBitmap(bitmap);
-      if(result){
-        document.getElementById('mpCod').value = result.getText();
-        beepScanner();
-        stopScanModal();
-        toast('✅ Código escaneado: '+result.getText(),'success');
-        return;
-      }
-    }catch(e){
-      // No encontró código en este frame, continuar
-    }
-  }
-
-  // Método 2: BarcodeDetector nativo de Chrome Android
-  if('BarcodeDetector' in window){
-    var det = new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code','itf','data_matrix','codabar']});
-    det.detect(canvas).then(function(codes){
-      if(!_mScanning) return;
-      if(codes.length > 0){
-        document.getElementById('mpCod').value = codes[0].rawValue;
-        beepScanner();
-        stopScanModal();
-        toast('✅ Código escaneado: '+codes[0].rawValue,'success');
-      } else {
-        setTimeout(function(){ _mScanLoop(video, canvas); }, 200);
-      }
-    }).catch(function(){
-      if(_mScanning) setTimeout(function(){ _mScanLoop(video, canvas); }, 200);
-    });
-    return;
-  }
-
-  // Si no hay ningún método disponible, reintentar
-  setTimeout(function(){ _mScanLoop(video, canvas); }, 200);
-}
-
 
 function beepScanner(){
   var a=document.getElementById('beepScanner');
@@ -950,7 +917,7 @@ function beepScanner(){
 }
 
 function stopScanModal(){
-  _mScanning=false;
+  _scanning=false;
   if(_mStream){ _mStream.getTracks().forEach(function(t){t.stop();}); _mStream=null; }
   var box=document.getElementById('modalScanBox');
   var video=document.getElementById('modalScanVideo');
