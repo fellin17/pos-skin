@@ -853,15 +853,28 @@ function startScanModal(){
   .then(function(stream){
     _mStream=stream;
     _mScanning=true;
-    video.srcObject=stream;
-    video.play().catch(function(){});
-    // Esperar que el video tenga datos antes de escanear
-    video.addEventListener('loadeddata', function onLoaded(){
-      video.removeEventListener('loadeddata', onLoaded);
-      _mScanLoop(video, canvas);
-    });
-    // Fallback si loadeddata no dispara
-    setTimeout(function(){ if(_mScanning) _mScanLoop(video, canvas); }, 800);
+    video.setAttribute('autoplay','');
+    video.setAttribute('playsinline','');
+    video.setAttribute('muted','');
+    video.muted = true;
+    video.srcObject = stream;
+    // Forzar play en Android
+    var playPromise = video.play();
+    if(playPromise !== undefined){
+      playPromise.catch(function(){
+        video.play().catch(function(){});
+      });
+    }
+    // Esperar frames reales antes de escanear
+    var attempts = 0;
+    var waitVideo = setInterval(function(){
+      attempts++;
+      if(video.readyState >= 2 && video.videoWidth > 0){
+        clearInterval(waitVideo);
+        _mScanLoop(video, canvas);
+      }
+      if(attempts > 30) clearInterval(waitVideo); // timeout 3s
+    }, 100);
   })
   .catch(function(err){
     box.style.display='none';
