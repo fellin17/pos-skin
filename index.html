@@ -499,16 +499,14 @@ body{font-family:'Poppins','Segoe UI',sans-serif;background:var(--bg);color:var(
 
   <!-- Enviar a número nuevo -->
   <div style="margin:0 0 12px;border:1.5px solid #25D366;border-radius:var(--r-lg);padding:14px;background:linear-gradient(135deg,#f0fdf4,#ffffff);box-shadow:0 2px 12px rgba(37,211,102,0.1);">
-    <div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em;">📲 Enviar nota a número nuevo</div>
-    <div style="display:flex;gap:8px">
-      <input type="tel" id="waNumNuevoMob" placeholder="Ej: 5512345678"
-        maxlength="10" inputmode="numeric"
-        style="flex:1;padding:12px;border:1px solid #86efac;border-radius:8px;font-size:14px;outline:none;font-family:inherit">
-      <button onclick="waNumNuevoMobEnviar()"
-        style="background:#25D366;color:white;border:none;border-radius:8px;padding:0 16px;font-weight:800;cursor:pointer;font-size:14px;touch-action:manipulation;white-space:nowrap">
-        Enviar
-      </button>
-    </div>
+    <div style="font-size:11px;font-weight:700;color:#16a34a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em;">📲 ENVIAR NOTA A NÚMERO NUEVO</div>
+    <input type="tel" id="waNumNuevoMob" placeholder="Número WhatsApp ej: 5512345678"
+      maxlength="10" inputmode="numeric"
+      style="width:100%;padding:14px;border:1.5px solid #86efac;border-radius:10px;font-size:16px;outline:none;font-family:Poppins,sans-serif;box-sizing:border-box;margin-bottom:10px;">
+    <button onclick="waNumNuevoMobEnviar()"
+      style="width:100%;padding:15px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer;font-size:15px;touch-action:manipulation;font-family:Poppins,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
+      📲 Enviar por WhatsApp
+    </button>
   </div>
 
   <!-- Mandar nota a contacto existente -->
@@ -522,7 +520,7 @@ body{font-family:'Poppins','Segoe UI',sans-serif;background:var(--bg);color:var(
     </button>
   </div>
 
-  <div style="height:80px"></div>
+  <div style="height:100px"></div>
 </div>
 
 <!-- ═══ TAB: NOTAS ═══ -->
