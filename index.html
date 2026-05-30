@@ -477,7 +477,7 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
 function iniciarFirebaseUser(userId){if(!fbReady)return;fbDoc=firebase.firestore().collection('pos_data').doc(userId);}
 let products=[],sales=[],cuts=[],cfg={bizName:'Brandy POS'};let cart=[];async function loadData(){try{const local=JSON.parse(localStorage.getItem('brandy_pos_backup')||'null');if(local)applyData(local);}catch{}
 if(fbReady){try{const snap=await Promise.race([fbDoc.get(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),15000))]);if(snap.exists){applyData(snap.data());localStorage.setItem('brandy_pos_backup',JSON.stringify(snap.data()));setSyncStatus('🟢 Sincronizado');}}catch(e){setSyncStatus('🔄 Sin conexión - reconectando...');setTimeout(function(){if(fbDoc)fbDoc.get().then(function(s){if(s.exists)applyData(s.data());setSyncStatus('🟢 En línea');}).catch(function(){setSyncStatus('🔴 Sin conexión');});},5000);}
-if(fbDoc)fbDoc.onSnapshot(snap=>{if(snap.exists){applyData(snap.data());localStorage.setItem('brandy_pos_backup',JSON.stringify(snap.data()));setSyncStatus('🟢 En línea');renderInventario();renderNotas();}},()=>setSyncStatus('🔴 Sin conexión'));}else if(!fbDoc){setSyncStatus('🔐 Esperando login...');}else{setSyncStatus('📱 Modo local');}}
+if(fbDoc)fbDoc.onSnapshot(snap=>{if(snap.exists){if(!_blockSnapshot){applyData(snap.data());}localStorage.setItem('brandy_pos_backup',JSON.stringify(snap.data()));setSyncStatus('🟢 En línea');renderInventario();renderNotas();}},()=>setSyncStatus('🔴 Sin conexión'));}else if(!fbDoc){setSyncStatus('🔐 Esperando login...');}else{setSyncStatus('📱 Modo local');}}
 function applyData(data){products=data.products||[];sales=data.sales||[];cuts=data.cuts||[];if(data.cfg)cfg={...cfg,...data.cfg};document.getElementById('hdrName').textContent=cfg.bizName||'Brandy POS';renderInventario();renderNotas();renderUltimosProductos();}
 async function saveData(){const data={products,sales,cuts,cfg};try{localStorage.setItem('brandy_pos_backup',JSON.stringify(data));}catch{}
 if(fbReady&&fbDoc)fbDoc.set(data).catch(()=>{});}
@@ -839,7 +839,7 @@ var btn=document.getElementById('btnEntrar');if(btn){btn.textContent='⏳ Cargan
 function abrirApp(nombreNegocio){_usuario=u;sessionStorage.setItem('pos_session',u);iniciarFirebaseUser(u);if(nombreNegocio){cfg.bizName=nombreNegocio;var h=document.getElementById('hdrName');if(h)h.textContent=nombreNegocio;}
 loadData();document.getElementById('loginScreen').style.display='none';showTab('venta');setTimeout(avisarStockBajo,2500);toast('¡BIENVENIDA! 🌸');if(btn){btn.textContent='✨ ENTRAR';btn.disabled=false;}}
 function mostrarError(msg){errEl.textContent=msg;errEl.style.display='';if(btn){btn.textContent='✨ ENTRAR';btn.disabled=false;}}
-var entro=false;if(fbReady&&fbLic){var timer=setTimeout(function(){if(!entro){var local=(cfg&&cfg.users)?cfg.users:[{user:'admin',pass:'1234'}];var ok=local.find(function(x){return x.user.toLowerCase()===u&&x.pass===p;});if(ok){entro=true;abrirApp('');}
+var entro=false;if(fbReady&&fbLic){var timer=setTimeout(function(){if(!entro){var local=(cfg&&cfg.users)?cfg.users:[{user:'admin',pass:'1234'}];var savedPass=localStorage.getItem('brandy_pass_'+u);var ok=local.find(function(x){return x.user.toLowerCase()===u&&x.pass===p;})||(savedPass===p?{user:u,pass:p}:null);if(ok){entro=true;abrirApp('');}
 else{mostrarError('⚠️ Sin respuesta del servidor. Verifica tu conexión.');}}},10000);fbLic.doc(u).get().then(function(snap){clearTimeout(timer);if(entro)return;entro=true;if(!snap.exists){mostrarError('❌ Usuario no encontrado. Pide a tu administrador que te registre.');return;}
 var lic=snap.data();if(!lic.password||lic.password!==p){mostrarError('❌ Contraseña incorrecta.');return;}
 if(lic.activa===false){mostrarError('🔴 Licencia inactiva. Contacta al administrador.');return;}
@@ -849,9 +849,36 @@ abrirApp(lic.farmaciaName||'');}).catch(function(e){clearTimeout(timer);if(entro
 else{mostrarError('⚠️ Error de conexión: '+e.message);}});}else{var localU=(cfg&&cfg.users)?cfg.users:[{user:'admin',pass:'1234'}];var okU=localU.find(function(x){return x.user.toLowerCase()===u&&x.pass===p;});if(okU){entro=true;abrirApp('');}
 else{mostrarError('❌ Usuario o contraseña incorrectos.');}}}
 function cerrarSesion(){if(!confirm('¿CERRAR SESIÓN?'))return;sessionStorage.removeItem('pos_session');_usuario=null;document.getElementById('loginScreen').style.display='flex';document.getElementById('liPass').value='';document.getElementById('liErr').style.display='none';}
-function cambiarPass(){var p1=document.getElementById('cfgPass1').value;var p2=document.getElementById('cfgPass2').value;if(!p1){toast('ESCRIBE LA NUEVA CONTRASEÑA','error');return;}
-if(p1!==p2){toast('LAS CONTRASEÑAS NO COINCIDEN','error');return;}
-if(!cfg.users)cfg.users=[{user:'admin',pass:'1234'}];var idx=cfg.users.findIndex(function(x){return x.user.toLowerCase()===(_usuario||'admin').toLowerCase();});if(idx>=0)cfg.users[idx].pass=p1;else cfg.users.push({user:_usuario||'admin',pass:p1});saveData();document.getElementById('cfgPass1').value='';document.getElementById('cfgPass2').value='';toast('✅ CONTRASEÑA ACTUALIZADA');}
+function cambiarPass(){
+  var p1=document.getElementById('cfgPass1').value;
+  var p2=document.getElementById('cfgPass2').value;
+  if(!p1){toast('ESCRIBE LA NUEVA CONTRASEÑA','error');return;}
+  if(p1!==p2){toast('LAS CONTRASEÑAS NO COINCIDEN','error');return;}
+  if(p1.length<4){toast('MÍNIMO 4 CARACTERES','error');return;}
+  var user=(_usuario||'admin').toLowerCase();
+  if(!cfg.users) cfg.users=[{user:'admin',pass:'1234'}];
+  var idx=cfg.users.findIndex(function(x){return x.user.toLowerCase()===user;});
+  if(idx>=0) cfg.users[idx].pass=p1;
+  else cfg.users.push({user:user,pass:p1});
+  // Bloquear onSnapshot 8 segundos para que no pise el cambio
+  _blockSnapshot=true;
+  clearTimeout(_blockSnapshotTimer);
+  _blockSnapshotTimer=setTimeout(function(){_blockSnapshot=false;},8000);
+  // Guardar en localStorage inmediatamente como respaldo
+  try{
+    var backup=JSON.parse(localStorage.getItem('brandy_pos_backup')||'{}');
+    if(!backup.cfg) backup.cfg={};
+    backup.cfg.users=cfg.users;
+    localStorage.setItem('brandy_pos_backup',JSON.stringify(backup));
+    // También clave dedicada para la contraseña
+    localStorage.setItem('brandy_pass_'+user, p1);
+  }catch(e){}
+  saveData();
+  document.getElementById('cfgPass1').value='';
+  document.getElementById('cfgPass2').value='';
+  toast('✅ CONTRASEÑA GUARDADA CORRECTAMENTE');
+}
+var _blockSnapshot=false, _blockSnapshotTimer=null;
 var _origShowTab=showTab;function showTab(tab){['scanner','inventario','venta','notas','agregar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.style.display=(t===tab)?'':'none';});['scanner','inventario','venta','notas','agregar'].forEach(function(t,i){var btns=document.querySelectorAll('.nav button');if(btns[i])btns[i].classList.toggle('active',t===tab);});var navConfig=document.getElementById('nav-config');if(navConfig)navConfig.classList.toggle('active',tab==='config');stopScan();if(tab==='venta')updateCartUI();if(tab==='inventario')renderInventario();if(tab==='notas')renderNotas();if(tab==='config')cargarConfig();}
 function cargarConfig(){var el=function(id){return document.getElementById(id);};if(el('cfgBizName'))el('cfgBizName').value=cfg.bizName||'';if(el('cfgPhone'))el('cfgPhone').value=cfg.phone||'';if(el('cfgAddress'))el('cfgAddress').value=cfg.address||'';if(el('cfgRfc'))el('cfgRfc').value=cfg.rfc||'';if(el('cfgMsg'))el('cfgMsg').value=cfg.msg||'';if(el('cfgUsuario'))el('cfgUsuario').textContent=_usuario||'admin';}
 function guardarConfig(){cfg.bizName=(document.getElementById('cfgBizName').value||'').trim().toUpperCase()||'MI NEGOCIO';cfg.phone=(document.getElementById('cfgPhone').value||'').trim();cfg.address=(document.getElementById('cfgAddress').value||'').trim();cfg.rfc=(document.getElementById('cfgRfc').value||'').trim();cfg.msg=(document.getElementById('cfgMsg').value||'').trim()||'¡Gracias por su compra!';saveData();document.getElementById('hdrName').textContent=cfg.bizName;toast('✅ CONFIGURACIÓN GUARDADA');}
