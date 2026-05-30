@@ -856,27 +856,30 @@ function cambiarPass(){
   if(p1!==p2){toast('LAS CONTRASEÑAS NO COINCIDEN','error');return;}
   if(p1.length<4){toast('MÍNIMO 4 CARACTERES','error');return;}
   var user=(_usuario||'admin').toLowerCase();
+  // Guardar en localStorage como respaldo inmediato
+  localStorage.setItem('brandy_pass_'+user, p1);
+  // Actualizar en licencias (donde el login realmente verifica)
+  if(fbReady&&fbLic){
+    fbLic.doc(user).update({password: p1}).then(function(){
+      toast('✅ CONTRASEÑA ACTUALIZADA','success');
+    }).catch(function(e){
+      // Si update falla (doc no existe), intentar set merge
+      fbLic.doc(user).set({password: p1},{merge:true}).then(function(){
+        toast('✅ CONTRASEÑA ACTUALIZADA','success');
+      }).catch(function(e2){
+        toast('⚠️ Error al guardar: '+e2.message,'error');
+      });
+    });
+  } else {
+    toast('⚠️ Sin conexión — contraseña guardada solo localmente','error');
+  }
+  // También actualizar cfg.users por consistencia
   if(!cfg.users) cfg.users=[{user:'admin',pass:'1234'}];
   var idx=cfg.users.findIndex(function(x){return x.user.toLowerCase()===user;});
-  if(idx>=0) cfg.users[idx].pass=p1;
-  else cfg.users.push({user:user,pass:p1});
-  // Bloquear onSnapshot 8 segundos para que no pise el cambio
-  _blockSnapshot=true;
-  clearTimeout(_blockSnapshotTimer);
-  _blockSnapshotTimer=setTimeout(function(){_blockSnapshot=false;},8000);
-  // Guardar en localStorage inmediatamente como respaldo
-  try{
-    var backup=JSON.parse(localStorage.getItem('brandy_pos_backup')||'{}');
-    if(!backup.cfg) backup.cfg={};
-    backup.cfg.users=cfg.users;
-    localStorage.setItem('brandy_pos_backup',JSON.stringify(backup));
-    // También clave dedicada para la contraseña
-    localStorage.setItem('brandy_pass_'+user, p1);
-  }catch(e){}
+  if(idx>=0) cfg.users[idx].pass=p1; else cfg.users.push({user:user,pass:p1});
   saveData();
   document.getElementById('cfgPass1').value='';
   document.getElementById('cfgPass2').value='';
-  toast('✅ CONTRASEÑA GUARDADA CORRECTAMENTE');
 }
 var _blockSnapshot=false, _blockSnapshotTimer=null;
 var _origShowTab=showTab;function showTab(tab){['scanner','inventario','venta','notas','agregar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.style.display=(t===tab)?'':'none';});['scanner','inventario','venta','notas','agregar'].forEach(function(t,i){var btns=document.querySelectorAll('.nav button');if(btns[i])btns[i].classList.toggle('active',t===tab);});var navConfig=document.getElementById('nav-config');if(navConfig)navConfig.classList.toggle('active',tab==='config');stopScan();if(tab==='venta')updateCartUI();if(tab==='inventario')renderInventario();if(tab==='notas')renderNotas();if(tab==='config')cargarConfig();}
