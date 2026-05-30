@@ -2,7 +2,7 @@
   "name": "Brandy POS",
   "short_name": "BrandyPOS",
   "description": "Sistema de Ventas Skincare",
-  "start_url": "/pos-skin/",
+  "start_url": "/pos-skin/index.html",
   "scope": "/pos-skin/",
   "display": "standalone",
   "orientation": "portrait",
