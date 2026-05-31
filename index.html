@@ -175,7 +175,7 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
     <input type="tel" id="waNumNuevoMob" placeholder="Número WhatsApp ej: 5512345678"
       maxlength="10" inputmode="numeric"
       style="width:100%;padding:14px;border:1.5px solid #86efac;border-radius:10px;font-size:16px;outline:none;font-family:Poppins,sans-serif;box-sizing:border-box;margin-bottom:10px;">
-    <button onclick="waNumNuevoMobEnviar()"
+    <button onclick="var _c=document.getElementById('ventaCliente').value.trim();var _t=cart.reduce(function(s,i){return s+i.sellPrice*i.qty;},0);if(_c&&cart.length)hablar('Enviando nota de '+_c.charAt(0).toUpperCase()+_c.slice(1).toLowerCase()+'. Total: '+_t.toFixed(0)+' pesos');waNumNuevoMobEnviar();"
       style="width:100%;padding:15px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer;font-size:15px;touch-action:manipulation;font-family:Poppins,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
       📲 Enviar por WhatsApp
     </button>
@@ -186,7 +186,7 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
     <div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em;">
       WHATSAPP — ENVIAR A CONTACTO EXISTENTE
     </div>
-    <button onclick="mandarPorWhatsApp()"
+    <button onclick="var _c=document.getElementById('ventaCliente').value.trim();var _t=cart.reduce(function(s,i){return s+i.sellPrice*i.qty;},0);if(_c&&cart.length)hablar('Enviando nota de '+_c.charAt(0).toUpperCase()+_c.slice(1).toLowerCase()+'. Total: '+_t.toFixed(0)+' pesos');mandarPorWhatsApp();"
       style="width:100%;padding:14px;background:#25D366;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:16px;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
       Mandar por WhatsApp
     </button>
