@@ -773,6 +773,8 @@ function buildNotaHTML(s){const d=new Date(s.date);const rows=s.items.map(i=>`
     <div style="padding:10px 14px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-wa btn-sm" onclick="waShare('${s.id}')">📲 WhatsApp</button>
       <button class="btn btn-sm" style="background:var(--blue);color:white;width:auto;margin:0" onclick="generarPDFNota('${s.id}')">📄 PDF</button><button class="btn btn-sm" style="background:#25D366;color:white;width:auto;margin:0" onclick="pdfWA('${s.id}')">📲 PDF+WA</button>
+      <button class="btn btn-sm" style="background:var(--orange);color:white;width:auto;margin:0" onclick="modificarNota('${s.id}')">✏️ Modificar</button>
+      <button class="btn btn-sm" style="background:var(--red);color:white;width:auto;margin:0" onclick="eliminarNota('${s.id}')">🗑️ Eliminar</button>
     </div>
   </div>`;}
 function waShare(saleId){const s=sales.find(x=>x.id===saleId);if(!s)return;const lineas=s.items.map(i=>`• ${i.name} ×${i.qty} — $${(i.sellPrice * i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName}*\n📅 ${new Date(s.date).toLocaleDateString('es-MX')}\n👤 *${s.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${s.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;window.location.href='whatsapp://send?text='+encodeURIComponent(msg);}
@@ -1190,7 +1192,105 @@ function pdfWA(saleId){
   window.location.href='whatsapp://send?text='+encodeURIComponent(msg);
   setTimeout(function(){generarPDFNota(saleId);},1000);
 }
+
+var _modNotaId = null;
+
+function modificarNota(saleId){
+  var sale=sales.find(function(s){return s.id===saleId;});
+  if(!sale){toast('Nota no encontrada','error');return;}
+  _modNotaId=saleId;
+  document.getElementById('modNotaCliente').value=sale.customer;
+  _renderModItems(sale.items);
+  _actualizarTotalMod();
+  document.getElementById('modalModNota').style.display='flex';
+}
+
+function _renderModItems(items){
+  var el=document.getElementById('modNotaItems');
+  el.innerHTML='<div style="font-size:11px;font-weight:700;color:#C2185B;text-transform:uppercase;margin-bottom:8px">Productos</div>';
+  items.forEach(function(item,idx){
+    var div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:8px;padding:10px;background:#FFF5F9;border-radius:10px;margin-bottom:8px';
+    div.innerHTML='<div style="flex:1;font-size:13px;font-weight:600">'+item.name+'</div>'
+      +'<div style="font-size:12px;color:#888">$'+item.sellPrice.toFixed(2)+'</div>'
+      +'<button onclick="_modQty('+idx+',-1)" style="width:30px;height:30px;border:1.5px solid #F3E0EA;background:white;border-radius:8px;cursor:pointer;font-size:16px;color:#C2185B;font-weight:700">-</button>'
+      +'<span id="modQty_'+idx+'" style="font-weight:800;min-width:24px;text-align:center">'+item.qty+'</span>'
+      +'<button onclick="_modQty('+idx+',1)" style="width:30px;height:30px;border:1.5px solid #F3E0EA;background:white;border-radius:8px;cursor:pointer;font-size:16px;color:#C2185B;font-weight:700">+</button>'
+      +'<button onclick="_eliminarItemMod('+idx+')" style="width:30px;height:30px;border:none;background:#FFEBEE;border-radius:8px;cursor:pointer;font-size:14px">🗑️</button>';
+    el.appendChild(div);
+  });
+}
+
+function _modQty(idx, delta){
+  var sale=sales.find(function(s){return s.id===_modNotaId;});
+  if(!sale) return;
+  sale.items[idx].qty = Math.max(1, (sale.items[idx].qty||1) + delta);
+  document.getElementById('modQty_'+idx).textContent = sale.items[idx].qty;
+  _actualizarTotalMod();
+}
+
+function _eliminarItemMod(idx){
+  var sale=sales.find(function(s){return s.id===_modNotaId;});
+  if(!sale) return;
+  if(sale.items.length<=1){toast('La nota debe tener al menos 1 producto','error');return;}
+  sale.items.splice(idx,1);
+  _renderModItems(sale.items);
+  _actualizarTotalMod();
+}
+
+function _actualizarTotalMod(){
+  var sale=sales.find(function(s){return s.id===_modNotaId;});
+  if(!sale) return;
+  var total=sale.items.reduce(function(a,i){return a+i.sellPrice*i.qty;},0);
+  document.getElementById('modNotaTotal').textContent='$'+total.toFixed(2);
+}
+
+function guardarModNota(){
+  var sale=sales.find(function(s){return s.id===_modNotaId;});
+  if(!sale) return;
+  sale.customer=document.getElementById('modNotaCliente').value.trim().toUpperCase()||sale.customer;
+  sale.total=sale.items.reduce(function(a,i){return a+i.sellPrice*i.qty;},0);
+  saveData();
+  cerrarModalNota();
+  renderNotas();
+  toast('✅ Nota actualizada');
+}
+
+function cerrarModalNota(){
+  document.getElementById('modalModNota').style.display='none';
+  _modNotaId=null;
+}
+
+function eliminarNota(saleId){
+  if(!confirm('¿Eliminar esta nota? Esta acción no se puede deshacer.')) return;
+  sales=sales.filter(function(s){return s.id!==saleId;});
+  saveData();
+  renderNotas();
+  toast('🗑️ Nota eliminada');
+}
 </script>
 
+
+<!-- Modal Modificar Nota -->
+<div id="modalModNota" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;padding:16px">
+  <div style="background:white;border-radius:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+    <div style="padding:18px 20px;border-bottom:1px solid #F3E0EA;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:800;font-size:16px;color:#C2185B">✏️ Modificar Nota</div>
+      <button onclick="cerrarModalNota()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999">✕</button>
+    </div>
+    <div style="padding:16px">
+      <div class="input-group">
+        <label>Cliente</label>
+        <input class="input" id="modNotaCliente" placeholder="Nombre de la clienta">
+      </div>
+      <div id="modNotaItems" style="margin-bottom:14px"></div>
+      <div style="background:#FFF5F9;border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:700;color:#C2185B">TOTAL</span>
+        <span id="modNotaTotal" style="font-weight:900;font-size:18px;color:#C2185B">$0.00</span>
+      </div>
+      <button onclick="guardarModNota()" class="btn btn-blue">💾 GUARDAR CAMBIOS</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
