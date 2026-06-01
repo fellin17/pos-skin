@@ -522,6 +522,10 @@ function applyData(data){
   renderInventario();renderNotas();renderUltimosProductos();
 }
 async function saveData(){
+  // Bloquear snapshot 5s para que no pise cambios recientes
+  _blockSnapshot=true;
+  clearTimeout(_blockSnapshotTimer);
+  _blockSnapshotTimer=setTimeout(function(){_blockSnapshot=false;},5000);
   // Guardar fotos en localStorage separado (por product id)
   try{
     var fotoMap={};
@@ -736,7 +740,7 @@ var customer=document.getElementById('ventaCliente').value.trim()||'Cliente';var
 +'👤 *'+customer+'*'+NL+NL
 +lineas+NL+NL+sep+NL
 +'💰 *TOTAL: $'+total.toFixed(2)+'*'+NL+sep+NL
-+(cfg.msg||'¡Gracias por su compra!');var profit=cart.reduce(function(s,i){return s+(i.sellPrice-(i.buyPrice||0))*i.qty;},0);sales.push({id:Date.now().toString(),date:new Date().toISOString(),customer:customer,items:cart.map(function(i){var _pr=products.find(function(p){return p.id===i.id;});return Object.assign({},i,{imgData:_pr?(_pr.imgData||null):null});}),total:total,profit:profit,inCut:false});saveData();window.location.href='whatsapp://send?text='+encodeURIComponent(msg);cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderNotas();toast('Nota guardada');}
++(cfg.msg||'¡Gracias por su compra!');var profit=cart.reduce(function(s,i){return s+(i.sellPrice-(i.buyPrice||0))*i.qty;},0);var _sale1={id:Date.now().toString(),date:new Date().toISOString(),customer:customer,items:cart.map(function(i){var _pr=products.find(function(p){return p.id===i.id;});return Object.assign({},i,{imgData:_pr?(_pr.imgData||null):null});}),total:total,profit:profit,inCut:false};products=products.map(function(p){var ci=cart.find(function(i){return i.id===p.id;});return ci?Object.assign({},p,{stock:p.stock-ci.qty}):p;});sales.push(_sale1);saveData();window.location.href='whatsapp://send?text='+encodeURIComponent(msg);cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();renderNotas();toast('Nota guardada');}
 function waNumNuevoMobEnviar(){const num=document.getElementById('waNumNuevoMob').value.trim().replace(/\D/g,'');if(num.length!==10){toast('Escribe los 10 dígitos del número','error');return;}
 const customer=document.getElementById('ventaCliente').value.trim();if(!customer){toast('Escribe el nombre de la clienta primero','error');return;}
 if(!cart.length){toast('El carrito está vacío','error');return;}
