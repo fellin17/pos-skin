@@ -787,10 +787,10 @@ function generarPDFNota(saleId){
   var fmt=function(v){return'$'+(parseFloat(v)||0).toFixed(2);};
 
   // ── ENCABEZADO ──
-  var logoSize=26,logoX=PL,dataX=PL+logoSize+5,yStart=y;
-  if(cfg.headerLogo){try{doc.addImage(cfg.headerLogo,'JPEG',logoX,y,logoSize,logoSize);}catch(e){}}
+  var logoSize=26,dataX=PL+logoSize+5,yStart=y;
+  if(cfg.headerLogo){try{doc.addImage(cfg.headerLogo,'JPEG',PL,y,logoSize,logoSize);}catch(e){}}
 
-  // Nombre elegante en cursiva rosa con espaciado
+  // Nombre elegante cursiva rosa
   var bizName=cfg.bizName||'MI NEGOCIO';
   doc.setFontSize(cfg.headerNameSize||24);
   doc.setFont('times','bolditalic');
@@ -800,12 +800,11 @@ function generarPDFNota(saleId){
     doc.text(bizName[i],dataX+tw,y+9);
     tw+=doc.getTextWidth(bizName[i])+ls;
   }
-  // Línea decorativa
   doc.setDrawColor(194,24,91);doc.setLineWidth(0.5);
   doc.line(dataX,y+11,dataX+tw-ls,y+11);
   doc.setLineWidth(0.15);doc.line(dataX,y+12.5,dataX+tw-ls,y+12.5);
 
-  // Datos negocio
+  // Datos negocio en negro
   var yd=y+17;
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
   if(cfg.address){doc.text(cfg.address,dataX,yd);yd+=4.5;}
@@ -813,23 +812,21 @@ function generarPDFNota(saleId){
   if(cfg.rfc){doc.text('RFC: '+cfg.rfc,dataX,yd);}
   doc.setTextColor(0,0,0);
   y=Math.max(yStart+logoSize+3,yd+3);
-
-  // Línea separadora simple
   doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);doc.line(PL,y,W-PR,y);ln(4);
 
-  // ── DATOS VENTA ──
+  // ── DATOS VENTA en negro ──
   var d=new Date(sale.date);
-  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
   var fechaStr=d.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
   doc.text('Fecha: '+fechaStr,PL,y);
   doc.text('Hora: '+d.toLocaleTimeString('es-MX'),W-PR,y,{align:'right'});ln(4.5);
   doc.text('Folio: #'+sale.id.slice(-8).toUpperCase(),PL,y);
   doc.setFont('helvetica','bold');doc.setFontSize(10);
   doc.text('Cliente: '+sale.customer,W-PR,y,{align:'right'});
   doc.setFont('helvetica','normal');doc.setFontSize(9);ln(4);
-  doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(4);
+  doc.setLineWidth(0.3);doc.setDrawColor(0,0,0);doc.line(PL,y,W-PR,y);ln(4);
 
-  // ── ENCABEZADO COLUMNAS ──
+  // ── ENCABEZADO COLUMNAS en negro ──
   doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(0,0,0);
   doc.text('PRODUCTO',PL,y);
   doc.text('CANT',PL+100,y,{align:'center'});
@@ -837,30 +834,27 @@ function generarPDFNota(saleId){
   doc.text('SUBTOTAL',W-PR,y,{align:'right'});
   ln(3);doc.setLineWidth(0.5);doc.line(PL,y,W-PR,y);ln(5);
 
-  // ── ITEMS con filas alternadas pastel ──
+  // ── ITEMS — filas rosa pastel alternadas, texto negro ──
   doc.setFont('helvetica','normal');doc.setFontSize(10);
-
   sale.items.forEach(function(item,idx){
-    var rowH=7;
-    // Fondo alternado rosa pastel / blanco
     if(idx%2===0){
       doc.setFillColor(255,235,245);
-      doc.rect(PL,y-3,W-PL-PR,rowH+1,'F');
+      doc.rect(PL,y-3,W-PL-PR,8,'F');
     }
-    var nm=item.name.length>55?item.name.slice(0,55)+'...':item.name;
     doc.setTextColor(0,0,0);
+    var nm=item.name.length>55?item.name.slice(0,55)+'...':item.name;
     doc.text(nm,PL,y);
     doc.text(String(item.qty),PL+100,y,{align:'center'});
     doc.text(fmt(item.sellPrice),PL+130,y,{align:'center'});
     doc.setFont('helvetica','bold');
     doc.text(fmt(item.sellPrice*item.qty),W-PR,y,{align:'right'});
     doc.setFont('helvetica','normal');
-    ln(rowH);
+    ln(7);
   });
 
-  doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(5);
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(5);
 
-  // ── TOTALES ──
+  // ── TOTALES en negro ──
   doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
   doc.text('Subtotal:',W-PR-60,y);
   doc.text(fmt(sale.total),W-PR,y,{align:'right'});ln(4);
@@ -869,7 +863,7 @@ function generarPDFNota(saleId){
   doc.setFontSize(15);doc.setFont('helvetica','bold');
   doc.text('TOTAL A PAGAR:',W-PR-85,y);
   doc.text(fmt(sale.total),W-PR,y,{align:'right'});
-  ln(10);doc.setLineWidth(0.3);doc.setDrawColor(0,0,0);doc.line(PL,y,W-PR,y);ln(5);
+  ln(10);doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(5);
 
   // ── PIE ──
   doc.setFont('helvetica','italic');doc.setFontSize(10);doc.setTextColor(60,60,60);
@@ -878,8 +872,6 @@ function generarPDFNota(saleId){
   doc.text('Comprobante de venta  -  '+(cfg.bizName||'MI NEGOCIO'),W/2,y,{align:'center'});
 
   doc.save('ticket_'+sale.customer.replace(/[^a-zA-Z0-9]/g,'_')+'_'+sale.id.slice(-6)+'.pdf');
-  toast('PDF descargado');
-}
   toast('PDF descargado');
 }
 let _chartMob=null;let _reportePeriodo='';let _reporteData={};function toggleReporteMenu(){const m=document.getElementById('reporteMenu');m.style.display=m.style.display==='none'?'':'none';}
