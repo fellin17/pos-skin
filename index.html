@@ -695,7 +695,7 @@ document.getElementById('top10MobList').innerHTML=top10.map(([name,data],i)=>{co
       </div>
     </div>`;}).join('')+'<div style="padding:10px 14px;font-size:11px;color:var(--muted);text-align:center">🔴 Sin stock / ⚠️ Bajo = necesita surtirse</div>';panel.style.display='';}
 function renderInventario(){var q=(document.getElementById('invSearch')?document.getElementById('invSearch').value:'').toLowerCase();var list=q?products.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0||(p.barcode||'').indexOf(q)>=0;}):products;var el=document.getElementById('invList');if(!el)return;if(!list.length){el.innerHTML='<div class="empty"><div class="icon">📦</div><p>'+(products.length?'SIN RESULTADOS':'SIN PRODUCTOS')+'</p></div>';return;}
-var rows='';for(var i=0;i<list.length;i++){var p=list[i];var stTag=p.stock===0?'<span class="tag tag-red">SIN STOCK</span>':p.stock<=5?'<span class="tag tag-orange">&#9888; '+p.stock+' PZS</span>':'<span class="tag tag-green">'+p.stock+' PZS</span>';rows+='<div class="product-item">';rows+='<div style="flex:1;cursor:pointer" onclick="abrirModalProd(\''+p.id+'\')"><div class="product-name">'+p.name+'</div><div class="product-meta">'+(p.barcode?'Cód: '+p.barcode+' · ':'')+'$'+p.buyPrice.toFixed(2)+' · '+stTag+'</div></div>';rows+='<div style="display:flex;align-items:center;gap:8px"><div class="product-price">$'+p.sellPrice.toFixed(2)+'</div>';rows+='<button onclick="abrirModalProd(\''+p.id+'\')" style="background:var(--rose-light);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--rose);font-size:13px;font-weight:700">✏️</button>';rows+='</div></div>';}
+var rows='';for(var i=0;i<list.length;i++){var p=list[i];var stTag=p.stock===0?'<span class="tag tag-red">SIN STOCK</span>':p.stock<=5?'<span class="tag tag-orange">&#9888; '+p.stock+' PZS</span>':'<span class="tag tag-green">'+p.stock+' PZS</span>';rows+='<div class="product-item">';rows+='<div style="flex:1;cursor:pointer" onclick="abrirModalProd(\''+p.id+'\')"><div class="product-name">'+p.name+'</div><div class="product-meta">'+(p.barcode?'Cód: '+p.barcode+' · ':'')+'$'+p.buyPrice.toFixed(2)+' · '+stTag+'</div></div>';rows+='<div style="display:flex;align-items:center;gap:8px"><div class="product-price">$'+p.sellPrice.toFixed(2)+'</div>';rows+='<button onclick="abrirModalProd(\''+p.id+'\')" style="background:var(--rose-light);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--rose);font-size:13px;font-weight:700">✏️</button>';rows+='<button onclick="eliminarProducto(\''+p.id+'\')" style="background:var(--red-light);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--red);font-size:13px;font-weight:700">🗑️</button>';rows+='</div></div>';}
 el.innerHTML='<div class="card">'+rows+'</div>';}
 function searchVenta(){const q=document.getElementById('ventaSearch').value.toLowerCase();const res=document.getElementById('ventaSearchResults');if(!q){res.style.display='none';return;}
 const found=products.filter(p=>p.name.toLowerCase().includes(q)||(p.barcode||'').includes(q));if(!found.length){res.style.display='none';return;}
@@ -1304,6 +1304,16 @@ function eliminarNota(saleId){
   saveData();
   renderNotas();
   toast('🗑️ Nota eliminada');
+}
+
+function eliminarProducto(id){
+  var p=products.find(function(x){return x.id===id;});
+  if(!p) return;
+  if(!confirm('¿Eliminar "'+p.name+'"?\nEsta acción no se puede deshacer.')) return;
+  products=products.filter(function(x){return x.id!==id;});
+  saveData();
+  renderInventario();
+  toast('🗑️ Producto eliminado');
 }
 </script>
 
