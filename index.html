@@ -175,7 +175,7 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
     <input type="tel" id="waNumNuevoMob" placeholder="Número WhatsApp ej: 5512345678"
       maxlength="10" inputmode="numeric"
       style="width:100%;padding:14px;border:1.5px solid #86efac;border-radius:10px;font-size:16px;outline:none;font-family:Poppins,sans-serif;box-sizing:border-box;margin-bottom:10px;">
-    <button onclick="var _c=document.getElementById('ventaCliente').value.trim();var _t=cart.reduce(function(s,i){return s+i.sellPrice*i.qty;},0);if(_c&&cart.length)hablar('Enviando nota de '+_c.charAt(0).toUpperCase()+_c.slice(1).toLowerCase()+'. Total: '+Math.floor(_t)+' pesos');waNumNuevoMobEnviar();"
+    <button onclick="vozWA();waNumNuevoMobEnviar();"
       style="width:100%;padding:15px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer;font-size:15px;touch-action:manipulation;font-family:Poppins,sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
       📲 Enviar por WhatsApp
     </button>
@@ -186,7 +186,7 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
     <div style="font-size:10px;font-weight:700;color:#16a34a;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em;">
       WHATSAPP — ENVIAR A CONTACTO EXISTENTE
     </div>
-    <button onclick="var _c=document.getElementById('ventaCliente').value.trim();var _t=cart.reduce(function(s,i){return s+i.sellPrice*i.qty;},0);if(_c&&cart.length)hablar('Enviando nota de '+_c.charAt(0).toUpperCase()+_c.slice(1).toLowerCase()+'. Total: '+Math.floor(_t)+' pesos');mandarPorWhatsApp();"
+    <button onclick="vozWA();mandarPorWhatsApp();"
       style="width:100%;padding:14px;background:#25D366;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:16px;touch-action:manipulation;display:flex;align-items:center;justify-content:center;gap:8px">
       Mandar por WhatsApp
     </button>
@@ -1011,6 +1011,15 @@ function stopScanModal(){
 }
 
 
+function vozWA(){
+  var c=document.getElementById('ventaCliente');
+  var t=cart.reduce(function(s,i){return s+i.sellPrice*i.qty;},0);
+  if(c&&c.value.trim()&&cart.length){
+    var nombre=c.value.trim();
+    nombre=nombre.charAt(0).toUpperCase()+nombre.slice(1).toLowerCase();
+    hablar('Enviando nota de '+nombre+'. Total: '+Math.floor(t)+' pesos');
+  }
+}
 function previewProdImg(input){
   if(!input.files||!input.files[0])return;
   var reader=new FileReader();
@@ -1033,7 +1042,7 @@ function cargarLogo(input){
     cfg.headerLogo=data;
     var p=document.getElementById('logoPreview');
     if(p)p.innerHTML='<img src="'+data+'" style="width:100%;height:100%;object-fit:contain;padding:4px">';
-    URL.revokeObjectURL(url);saveData();toast('✅ Logo guardado');
+    URL.revokeObjectURL(url);saveData();toast('Logo guardado');
   };
   img.src=url;
 }
@@ -1103,9 +1112,9 @@ Total: '+fmt(sale.total)+'
 Adjunto PDF de tu compra.';
       window.location.href='whatsapp://send?text='+encodeURIComponent(msg);
     },1500);
-    toast('📲 PDF descargado — abriendo WhatsApp');
+    toast('PDF descargado — abriendo WhatsApp');
   } else {
-    toast('📄 PDF descargado');
+    toast('PDF descargado');
   }
 }
 </script>
