@@ -1195,6 +1195,43 @@ function pdfWA(saleId){
 
 var _modNotaId = null;
 
+function buscarProdMod(q){
+  var res=document.getElementById('modProdResults');
+  if(!q||q.length<1){res.style.display='none';return;}
+  var found=products.filter(function(p){
+    return p.name.toLowerCase().includes(q.toLowerCase())||(p.barcode&&p.barcode.includes(q));
+  }).slice(0,6);
+  if(!found.length){res.style.display='none';return;}
+  res.style.display='block';
+  res.innerHTML='';
+  found.forEach(function(p){
+    var div=document.createElement('div');
+    div.style.cssText='padding:10px 14px;border-bottom:1px solid #F3E0EA;cursor:pointer;display:flex;justify-content:space-between;align-items:center';
+    div.innerHTML='<div style="font-size:13px;font-weight:600">'+p.name+'</div><div style="font-size:12px;font-weight:700;color:#C2185B">$'+p.sellPrice.toFixed(2)+'</div>';
+    div.addEventListener('click',function(){agregarProdMod(p.id);});
+    div.addEventListener('mouseover',function(){this.style.background='#FFF5F9';});
+    div.addEventListener('mouseout',function(){this.style.background='white';});
+    res.appendChild(div);
+  });
+}
+
+function agregarProdMod(prodId){
+  var sale=sales.find(function(s){return s.id===_modNotaId;});
+  var prod=products.find(function(p){return p.id===prodId;});
+  if(!sale||!prod) return;
+  var existing=sale.items.find(function(i){return i.id===prodId;});
+  if(existing){
+    existing.qty+=1;
+  } else {
+    sale.items.push({id:prod.id,name:prod.name,barcode:prod.barcode||'',sellPrice:prod.sellPrice,buyPrice:prod.buyPrice||0,qty:1});
+  }
+  _renderModItems(sale.items);
+  _actualizarTotalMod();
+  document.getElementById('modBuscarProd').value='';
+  document.getElementById('modProdResults').style.display='none';
+  toast('✅ '+prod.name+' agregado');
+}
+
 function modificarNota(saleId){
   var sale=sales.find(function(s){return s.id===saleId;});
   if(!sale){toast('Nota no encontrada','error');return;}
@@ -1282,6 +1319,11 @@ function eliminarNota(saleId){
       <div class="input-group">
         <label>Cliente</label>
         <input class="input" id="modNotaCliente" placeholder="Nombre de la clienta">
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#C2185B;text-transform:uppercase;margin-bottom:8px">➕ Agregar producto</div>
+        <input id="modBuscarProd" class="input" placeholder="Buscar producto para agregar..." oninput="buscarProdMod(this.value)" style="text-transform:none;margin-bottom:6px">
+        <div id="modProdResults" style="background:white;border:1.5px solid #F3E0EA;border-radius:10px;display:none;max-height:160px;overflow-y:auto"></div>
       </div>
       <div id="modNotaItems" style="margin-bottom:14px"></div>
       <div style="background:#FFF5F9;border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
