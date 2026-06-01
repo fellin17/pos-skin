@@ -503,9 +503,40 @@ function iniciarFirebaseUser(userId){if(!fbReady)return;fbDoc=firebase.firestore
 let products=[],sales=[],cuts=[],cfg={bizName:'Brandy POS'};let cart=[];async function loadData(){try{const local=JSON.parse(localStorage.getItem('brandy_pos_backup')||'null');if(local)applyData(local);}catch{}
 if(fbReady){try{const snap=await Promise.race([fbDoc.get(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),15000))]);if(snap.exists){applyData(snap.data());localStorage.setItem('brandy_pos_backup',JSON.stringify(snap.data()));setSyncStatus('🟢 Sincronizado');}}catch(e){setSyncStatus('🔄 Sin conexión - reconectando...');setTimeout(function(){if(fbDoc)fbDoc.get().then(function(s){if(s.exists)applyData(s.data());setSyncStatus('🟢 En línea');}).catch(function(){setSyncStatus('🔴 Sin conexión');});},5000);}
 if(fbDoc)fbDoc.onSnapshot(snap=>{if(snap.exists){if(!_blockSnapshot){applyData(snap.data());}localStorage.setItem('brandy_pos_backup',JSON.stringify(snap.data()));setSyncStatus('🟢 En línea');renderInventario();renderNotas();}},()=>setSyncStatus('🔴 Sin conexión'));}else if(!fbDoc){setSyncStatus('🔐 Esperando login...');}else{setSyncStatus('📱 Modo local');}}
-function applyData(data){products=data.products||[];sales=data.sales||[];cuts=data.cuts||[];if(data.cfg)cfg={...cfg,...data.cfg};document.getElementById('hdrName').textContent=cfg.bizName||'Brandy POS';renderInventario();renderNotas();renderUltimosProductos();}
-async function saveData(){const data={products,sales,cuts,cfg};try{localStorage.setItem('brandy_pos_backup',JSON.stringify(data));}catch{}
-if(fbReady&&fbDoc)fbDoc.set(data).catch(()=>{});}
+function applyData(data){
+  products=data.products||[];
+  sales=data.sales||[];
+  cuts=data.cuts||[];
+  if(data.cfg) cfg=Object.assign({},cfg,data.cfg);
+  // Restaurar fotos desde localStorage
+  try{
+    var fotoMap=JSON.parse(localStorage.getItem('brandy_pos_fotos')||'{}');
+    products=products.map(function(p){
+      return Object.assign({},p,{imgData:fotoMap[p.id]||p.imgData||null});
+    });
+    // Restaurar logo
+    var logo=localStorage.getItem('brandy_pos_logo');
+    if(logo) cfg.headerLogo=logo;
+  }catch(e){}
+  document.getElementById('hdrName').textContent=cfg.bizName||'Brandy POS';
+  renderInventario();renderNotas();renderUltimosProductos();
+}
+async function saveData(){
+  // Guardar fotos en localStorage separado (por product id)
+  try{
+    var fotoMap={};
+    products.forEach(function(p){if(p.imgData)fotoMap[p.id]=p.imgData;});
+    localStorage.setItem('brandy_pos_fotos',JSON.stringify(fotoMap));
+    // Logo también en localStorage
+    if(cfg.headerLogo) localStorage.setItem('brandy_pos_logo',cfg.headerLogo);
+  }catch(e){}
+  // Data sin fotos para Firebase y localStorage principal
+  var prodSinFotos=products.map(function(p){var q=Object.assign({},p);delete q.imgData;return q;});
+  var cfgSinLogo=Object.assign({},cfg);delete cfgSinLogo.headerLogo;
+  var data={products:prodSinFotos,sales:sales,cuts:cuts,cfg:cfgSinLogo};
+  try{localStorage.setItem('brandy_pos_backup',JSON.stringify(data));}catch(e){}
+  if(fbReady&&fbDoc)fbDoc.set(data).catch(function(){});
+}
 function setSyncStatus(msg){document.getElementById('syncStatus').textContent=msg;}
 function showTab(tab){['scanner','inventario','venta','notas','agregar'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'':'none';});document.querySelectorAll('.nav button').forEach((btn,i)=>{btn.classList.toggle('active',['scanner','inventario','venta','notas','agregar'][i]===tab);});stopScan();if(tab==='venta')updateCartUI();if(tab==='agregar')renderUltimosProductos();}
 let scanMode='multi';let _stream=null;let _scanning=false;
@@ -709,10 +740,10 @@ var customer=document.getElementById('ventaCliente').value.trim()||'Cliente';var
 function waNumNuevoMobEnviar(){const num=document.getElementById('waNumNuevoMob').value.trim().replace(/\D/g,'');if(num.length!==10){toast('Escribe los 10 dígitos del número','error');return;}
 const customer=document.getElementById('ventaCliente').value.trim();if(!customer){toast('Escribe el nombre de la clienta primero','error');return;}
 if(!cart.length){toast('El carrito está vacío','error');return;}
-const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,phone:num,items:cart.map(i=>{var _p=products.find(function(p){return p.id===i.id;});return Object.assign({},i,{imgData:_p?(_p.imgData||null):null});}),total,profit,inCut:false,};if(!cfg.customers)cfg.customers=[];if(!cfg.customers.includes(customer))cfg.customers.push(customer);products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();const lineas=sale.items.map(i=>`• ${i.name} x${i.qty} — $${(i.sellPrice*i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;document.getElementById('waNumNuevoMob').value='';toast('✅ Venta guardada — abriendo WhatsApp');setTimeout(()=>{window.location.href=`whatsapp://send?phone=52${num}&text=${encodeURIComponent(msg)}`;},500);}
+const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,phone:num,items:cart.map(i=>({...i})),total,profit,inCut:false,};if(!cfg.customers)cfg.customers=[];if(!cfg.customers.includes(customer))cfg.customers.push(customer);products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();const lineas=sale.items.map(i=>`• ${i.name} x${i.qty} — $${(i.sellPrice*i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;document.getElementById('waNumNuevoMob').value='';toast('✅ Venta guardada — abriendo WhatsApp');setTimeout(()=>{window.location.href=`whatsapp://send?phone=52${num}&text=${encodeURIComponent(msg)}`;},500);}
 function completarVenta(){const customer=document.getElementById('ventaCliente').value.trim().toUpperCase();if(!customer){toast('ESCRIBE EL NOMBRE DE LA CLIENTA','error');return;}
 if(!cart.length){toast('EL CARRITO ESTÁ VACÍO','error');return;}
-const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,items:cart.map(i=>{var _p=products.find(function(p){return p.id===i.id;});return Object.assign({},i,{imgData:_p?(_p.imgData||null):null});}),total,profit,inCut:false,qrData:`ID:${Date.now().toString()}\nFolio: #${Date.now().toString().slice(-8).toUpperCase()}\nCliente: ${customer}\nTOTAL: $${total.toFixed(2)}`};products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();const lineas=sale.items.map(i=>`• ${i.name.toUpperCase()} ×${i.qty} — $${(i.sellPrice * i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *Cliente: ${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();toast('✅ VENTA GUARDADA');setTimeout(()=>{if(confirm('¿ENVIAR POR WHATSAPP?')){window.location.href='whatsapp://send?text='+encodeURIComponent(msg);}},500);}
+const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,items:cart.map(i=>({...i})),total,profit,inCut:false,qrData:`ID:${Date.now().toString()}\nFolio: #${Date.now().toString().slice(-8).toUpperCase()}\nCliente: ${customer}\nTOTAL: $${total.toFixed(2)}`};products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();const lineas=sale.items.map(i=>`• ${i.name.toUpperCase()} ×${i.qty} — $${(i.sellPrice * i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *Cliente: ${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();toast('✅ VENTA GUARDADA');setTimeout(()=>{if(confirm('¿ENVIAR POR WHATSAPP?')){window.location.href='whatsapp://send?text='+encodeURIComponent(msg);}},500);}
 function renderNotas(){const q=(document.getElementById('notaSearch')?.value||'').toLowerCase();const el=document.getElementById('notasList');if(!el)return;const list=q?[...sales].reverse().filter(s=>s.customer.toLowerCase().includes(q)):[...sales].reverse().slice(0,20);if(!list.length){el.innerHTML='<div class="empty"><div class="icon">📋</div><p>Sin notas</p></div>';return;}
 el.innerHTML=list.map(s=>buildNotaHTML(s)).join('');}
 function buildNotaHTML(s){const d=new Date(s.date);const rows=s.items.map(i=>`
