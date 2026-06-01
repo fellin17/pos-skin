@@ -522,10 +522,6 @@ function applyData(data){
   renderInventario();renderNotas();renderUltimosProductos();
 }
 async function saveData(){
-  // Bloquear snapshot 5s para que no pise cambios recientes
-  _blockSnapshot=true;
-  clearTimeout(_blockSnapshotTimer);
-  _blockSnapshotTimer=setTimeout(function(){_blockSnapshot=false;},5000);
   // Guardar fotos en localStorage separado (por product id)
   try{
     var fotoMap={};
@@ -539,6 +535,7 @@ async function saveData(){
   var cfgSinLogo=Object.assign({},cfg);delete cfgSinLogo.headerLogo;
   var data={products:prodSinFotos,sales:sales,cuts:cuts,cfg:cfgSinLogo};
   try{localStorage.setItem('brandy_pos_backup',JSON.stringify(data));}catch(e){}
+  _blockSnapshot=true;clearTimeout(_blockSnapshotTimer);_blockSnapshotTimer=setTimeout(function(){_blockSnapshot=false;},5000);
   if(fbReady&&fbDoc)fbDoc.set(data).catch(function(){});
 }
 function setSyncStatus(msg){document.getElementById('syncStatus').textContent=msg;}
