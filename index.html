@@ -710,7 +710,7 @@ res.innerHTML=found.map(p=>`
   `).join('');res.style.display='';}
 function addToCartMobile(id){const p=products.find(x=>x.id===id);if(!p)return;if(p.stock<=0){toast('Sin stock','error');return;}
 const ex=cart.find(i=>i.id===id);if(ex){if(ex.qty>=p.stock){toast('No hay más stock','error');return;}
-ex.qty++;}else{cart.push({id:p.id,name:p.name,buyPrice:p.buyPrice,sellPrice:p.sellPrice,qty:1,stock:p.stock});}
+ex.qty++;cart.splice(cart.indexOf(ex),1);cart.unshift(ex);}else{cart.unshift({id:p.id,name:p.name,buyPrice:p.buyPrice,sellPrice:p.sellPrice,qty:1,stock:p.stock});}
 document.getElementById('ventaSearch').value='';document.getElementById('ventaSearchResults').style.display='none';updateCartUI();toast(`✅ ${p.name} agregado`);}
 function updateCartUI(){const el=document.getElementById('cartList');const bar=document.getElementById('summaryBar');const totalEl=document.getElementById('cartTotal');if(!el)return;if(!cart.length){el.innerHTML='<div class="empty"><div class="icon">🛒</div><p>Agrega productos</p></div>';bar.style.display='none';return;}
 const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);totalEl.textContent='$'+total.toFixed(2);bar.style.display='';el.innerHTML=cart.map(i=>`
