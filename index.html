@@ -394,6 +394,16 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
   <div class="card" style="margin-bottom:14px">
     <div class="card-title">🏪 DATOS DEL NEGOCIO</div>
     <div style="padding:16px">
+      <div class="input-group"><label>LOGO DEL NEGOCIO</label>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+          <div id="logoPreview" style="width:68px;height:68px;border-radius:12px;background:#FCE4EC;border:2px dashed #C2185B;display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;overflow:hidden;">🌸</div>
+          <div style="flex:1">
+            <input type="file" id="logoFile" accept="image/*" style="display:none" onchange="cargarLogo(this)">
+            <button type="button" onclick="document.getElementById('logoFile').click()" style="width:100%;padding:10px;background:#FCE4EC;border:1.5px dashed #C2185B;border-radius:10px;color:#C2185B;font-weight:700;font-size:13px;cursor:pointer;font-family:Poppins,sans-serif;margin-bottom:4px">🖼️ Subir Logo</button>
+            <div style="font-size:10px;color:#999">JPG, PNG, WEBP, GIF, SVG</div>
+          </div>
+        </div>
+      </div>
       <div class="input-group"><label>Nombre del negocio</label>
         <input class="input" id="cfgBizName" placeholder="MI NEGOCIO" style="text-transform:uppercase"></div>
       <div class="input-group"><label>Teléfono</label>
@@ -911,7 +921,7 @@ function cambiarPass(){
   document.getElementById('cfgPass2').value='';
 }
 var _blockSnapshot=false, _blockSnapshotTimer=null;
-var _origShowTab=showTab;function showTab(tab){['scanner','inventario','venta','notas','agregar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.style.display=(t===tab)?'':'none';});['scanner','inventario','venta','notas','agregar'].forEach(function(t,i){var btns=document.querySelectorAll('.nav button');if(btns[i])btns[i].classList.toggle('active',t===tab);});var navConfig=document.getElementById('nav-config');if(navConfig)navConfig.classList.toggle('active',tab==='config');stopScan();if(tab==='venta')updateCartUI();if(tab==='inventario')renderInventario();if(tab==='notas')renderNotas();if(tab==='config')cargarConfig();}
+var _origShowTab=showTab;function showTab(tab){['scanner','inventario','venta','notas','agregar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.style.display=(t===tab)?'':'none';});['scanner','inventario','venta','notas','agregar'].forEach(function(t,i){var btns=document.querySelectorAll('.nav button');if(btns[i])btns[i].classList.toggle('active',t===tab);});var navConfig=document.getElementById('nav-config');if(navConfig)navConfig.classList.toggle('active',tab==='config');stopScan();if(tab==='venta')updateCartUI();if(tab==='inventario')renderInventario();if(tab==='notas')renderNotas();if(tab==='config'){cargarConfig();var _lp=document.getElementById('logoPreview');if(_lp&&cfg.headerLogo)_lp.innerHTML='<img src="'+cfg.headerLogo+'" style="width:100%;height:100%;object-fit:contain;padding:4px">';}}
 function cargarConfig(){var el=function(id){return document.getElementById(id);};if(el('cfgBizName'))el('cfgBizName').value=cfg.bizName||'';if(el('cfgPhone'))el('cfgPhone').value=cfg.phone||'';if(el('cfgAddress'))el('cfgAddress').value=cfg.address||'';if(el('cfgRfc'))el('cfgRfc').value=cfg.rfc||'';if(el('cfgMsg'))el('cfgMsg').value=cfg.msg||'';if(el('cfgUsuario'))el('cfgUsuario').textContent=_usuario||'admin';}
 function guardarConfig(){cfg.bizName=(document.getElementById('cfgBizName').value||'').trim().toUpperCase()||'MI NEGOCIO';cfg.phone=(document.getElementById('cfgPhone').value||'').trim();cfg.address=(document.getElementById('cfgAddress').value||'').trim();cfg.rfc=(document.getElementById('cfgRfc').value||'').trim();cfg.msg=(document.getElementById('cfgMsg').value||'').trim()||'¡Gracias por su compra!';saveData();document.getElementById('hdrName').textContent=cfg.bizName;toast('✅ CONFIGURACIÓN GUARDADA');}
 var _editProdId=null;function abrirModalProd(id){_editProdId=id||null;var p=id?products.find(function(x){return x.id===id;}):null;document.getElementById('modalProdTitle').textContent=p?'✏️ Editar Producto':'➕ Agregar Producto';document.getElementById('mpCod').value=p?(p.barcode||''):'';document.getElementById('mpNom').value=p?(p.name||''):'';document.getElementById('mpCom').value=p?(p.buyPrice||''):'';document.getElementById('mpVen').value=p?(p.sellPrice||''):'';document.getElementById('mpSto').value=p?(p.stock||''):'';document.getElementById('modalProd').style.display='flex';setTimeout(function(){document.getElementById('mpNom').focus();},100);}
@@ -993,6 +1003,23 @@ function vozWA(){
     var n=c.value.trim();
     hablar('Enviando nota de '+n.charAt(0).toUpperCase()+n.slice(1).toLowerCase()+'. Total: '+Math.floor(t)+' pesos');
   }
+}
+function cargarLogo(input){
+  if(!input.files||!input.files[0])return;
+  var img=new Image(),url=URL.createObjectURL(input.files[0]);
+  img.onload=function(){
+    var M=300,w=img.width,h=img.height;
+    if(w>M){h=Math.round(h*M/w);w=M;}
+    if(h>M){w=Math.round(w*M/h);h=M;}
+    var c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    var data=c.toDataURL('image/jpeg',0.85);
+    cfg.headerLogo=data;
+    var p=document.getElementById('logoPreview');
+    if(p)p.innerHTML='<img src="'+data+'" style="width:100%;height:100%;object-fit:contain;padding:4px">';
+    URL.revokeObjectURL(url);saveData();toast('Logo guardado');
+  };
+  img.src=url;
 }
 </script>
 
