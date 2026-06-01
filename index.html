@@ -466,16 +466,7 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
       </div></div>
     <div class="input-group"><label>Nombre del producto *</label>
       <input class="input" id="mpNom" placeholder="Nombre del producto"></div>
-      <div class="input-group"><label>FOTO DEL PRODUCTO</label>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div id="mpImgPreview" style="width:64px;height:64px;border-radius:10px;background:#FCE4EC;border:2px dashed #C2185B;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;overflow:hidden;">📦</div>
-          <div style="flex:1">
-            <input type="file" id="mpImgFile" accept="image/*" capture="environment" style="display:none" onchange="previewProdImg(this)">
-            <button type="button" onclick="document.getElementById('mpImgFile').click()" style="width:100%;padding:10px;background:#FCE4EC;border:1.5px dashed #C2185B;border-radius:10px;color:#C2185B;font-weight:700;font-size:13px;cursor:pointer;font-family:Poppins,sans-serif;">📷 Tomar foto</button>
-            <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.5">📌 <strong>Opcional.</strong> La foto sirve como referencia visual para identificar el producto con mayor precisión en el inventario y en las notas de venta.</div>
-          </div>
-        </div>
-      </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="input-group"><label>Precio compra</label>
         <input class="input" type="number" id="mpCom" placeholder="0.00" inputmode="decimal"></div>
