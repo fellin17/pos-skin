@@ -1068,7 +1068,7 @@ function cambiarPass(){
   document.getElementById('cfgPass2').value='';
 }
 var _blockSnapshot=false, _blockSnapshotTimer=null;
-var _origShowTab=showTab;function showTab(tab){['scanner','inventario','venta','notas','agregar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.style.display=(t===tab)?'':'none';});['scanner','inventario','venta','notas','agregar'].forEach(function(t,i){var btns=document.querySelectorAll('.nav button');if(btns[i])btns[i].classList.toggle('active',t===tab);});var navConfig=document.getElementById('nav-config');if(navConfig)navConfig.classList.toggle('active',tab==='config');stopScan();if(tab==='venta')updateCartUI();if(tab==='inventario')renderInventario();if(tab==='notas')renderNotas();if(tab==='config'){cargarConfig();var _lp=document.getElementById('logoPreview');if(_lp&&cfg.headerLogo)_lp.innerHTML='<img src="'+cfg.headerLogo+'" style="width:100%;height:100%;object-fit:contain;padding:4px">';}}
+var _origShowTab=showTab;function showTab(tab){['scanner','inventario','venta','notas','agregar','config'].forEach(function(t){var el=document.getElementById('tab-'+t);if(el)el.style.display=(t===tab)?'':'none';});['scanner','inventario','venta','notas','agregar'].forEach(function(t,i){var btns=document.querySelectorAll('.nav button');if(btns[i])btns[i].classList.toggle('active',t===tab);});var navConfig=document.getElementById('nav-config');if(navConfig)navConfig.classList.toggle('active',tab==='config');stopScan();if(tab==='venta')updateCartUI();if(tab==='inventario'){renderInventario();vozStockBajo();}if(tab==='notas')renderNotas();if(tab==='config'){cargarConfig();var _lp=document.getElementById('logoPreview');if(_lp&&cfg.headerLogo)_lp.innerHTML='<img src="'+cfg.headerLogo+'" style="width:100%;height:100%;object-fit:contain;padding:4px">';}}
 function cargarConfig(){var el=function(id){return document.getElementById(id);};if(el('cfgBizName'))el('cfgBizName').value=cfg.bizName||'';if(el('cfgPhone'))el('cfgPhone').value=cfg.phone||'';if(el('cfgAddress'))el('cfgAddress').value=cfg.address||'';if(el('cfgRfc'))el('cfgRfc').value=cfg.rfc||'';if(el('cfgMsg'))el('cfgMsg').value=cfg.msg||'';if(el('cfgUsuario'))el('cfgUsuario').textContent=_usuario||'admin';}
 function guardarConfig(){cfg.bizName=(document.getElementById('cfgBizName').value||'').trim().toUpperCase()||'MI NEGOCIO';cfg.phone=(document.getElementById('cfgPhone').value||'').trim();cfg.address=(document.getElementById('cfgAddress').value||'').trim();cfg.rfc=(document.getElementById('cfgRfc').value||'').trim();cfg.msg=(document.getElementById('cfgMsg').value||'').trim()||'¡Gracias por su compra!';saveData();document.getElementById('hdrName').textContent=cfg.bizName;toast('✅ CONFIGURACIÓN GUARDADA');}
 var _editProdId=null;function abrirModalProd(id){_editProdId=id||null;var p=id?products.find(function(x){return x.id===id;}):null;document.getElementById('modalProdTitle').textContent=p?'✏️ Editar Producto':'➕ Agregar Producto';document.getElementById('mpCod').value=p?(p.barcode||''):'';document.getElementById('mpNom').value=p?(p.name||''):'';document.getElementById('mpCom').value=p?(p.buyPrice||''):'';document.getElementById('mpVen').value=p?(p.sellPrice||''):'';document.getElementById('mpSto').value=p?(p.stock||''):'';
@@ -1315,6 +1315,20 @@ function eliminarProducto(id){
   saveData();
   renderInventario();
   toast('🗑️ Producto eliminado');
+}
+
+function vozStockBajo(){
+  var bajos=products.filter(function(p){return p.stock>0&&p.stock<10;});
+  var sinStock=products.filter(function(p){return p.stock===0;});
+  if(!bajos.length&&!sinStock.length) return;
+  var msg='';
+  if(sinStock.length>0){
+    msg+='Atención. '+sinStock.length+' producto'+(sinStock.length>1?'s':'')+' sin existencia. ';
+  }
+  if(bajos.length>0){
+    msg+='Stock bajo en '+bajos.length+' producto'+(bajos.length>1?'s':'')+'. Revisar inventario.';
+  }
+  hablar(msg);
 }
 </script>
 
