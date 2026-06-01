@@ -1046,23 +1046,7 @@ function previewProdImg(input){
   reader.readAsDataURL(input.files[0]);
 }
 
-function pdfWA(saleId){
-  var sale=sales.find(function(x){return x.id===saleId;});
-  if(!sale){toast('Nota no encontrada','error');return;}
-  generarPDFNota(saleId);
-  setTimeout(function(){
-    var msg='*'+(cfg.bizName||'MI NEGOCIO')+'*'
-      +'
-Cliente: '+sale.customer
-      +'
-Total: $'+sale.total.toFixed(2)
-      +'
-
-Adjunto PDF de tu compra.';
-    window.location.href='whatsapp://send?text='+encodeURIComponent(msg);
-  },2000);
-  toast('PDF descargado. Abriendo WhatsApp...');
-}
+function pdfWA(id){toast('PDF+WA próximamente');}
 </script>
 
 </body>
