@@ -466,7 +466,16 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
       </div></div>
     <div class="input-group"><label>Nombre del producto *</label>
       <input class="input" id="mpNom" placeholder="Nombre del producto"></div>
-
+      <div class="input-group"><label>FOTO DEL PRODUCTO</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div id="mpImgPreview" style="width:64px;height:64px;border-radius:10px;background:#FCE4EC;border:2px dashed #C2185B;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;overflow:hidden;">📦</div>
+          <div style="flex:1">
+            <input type="file" id="mpImgFile" accept="image/*" capture="environment" style="display:none" onchange="previewProdImg(this)">
+            <button type="button" onclick="document.getElementById('mpImgFile').click()" style="width:100%;padding:10px;background:#FCE4EC;border:1.5px dashed #C2185B;border-radius:10px;color:#C2185B;font-weight:700;font-size:13px;cursor:pointer;font-family:Poppins,sans-serif;">📷 Tomar foto</button>
+            <div style="font-size:10px;color:#999;margin-top:4px">Abre la cámara trasera</div>
+          </div>
+        </div>
+      </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="input-group"><label>Precio compra</label>
         <input class="input" type="number" id="mpCom" placeholder="0.00" inputmode="decimal"></div>
@@ -807,23 +816,19 @@ function generarPDFNota(saleId){
   doc.setTextColor(0,0,0);ln(16);
 
   // ── ENCABEZADO COLUMNAS ──
-  var FOTO_W=14; // foto muy pequeña
-  var COL_FOTO=PL;
-  var COL_DESC=PL+FOTO_W+3;
+  var COL_DESC=PL;
   var COL_CANT=W-PR-46;
   var COL_PU=W-PR-22;
   var COL_SUB=W-PR;
 
   doc.setFillColor(194,24,91);doc.rect(PL,y-2,W-PL-PR,8,'F');
   doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
-  doc.text('IMG',COL_FOTO+7,y+3,{align:'center'});
   doc.text('DESCRIPCION DEL PRODUCTO',COL_DESC,y+3);
   doc.text('QTY',COL_CANT,y+3,{align:'center'});
   doc.text('P.UNIT',COL_PU,y+3,{align:'center'});
   doc.text('TOTAL',COL_SUB,y+3,{align:'right'});
   // lineas verticales
   doc.setDrawColor(255,200,220);doc.setLineWidth(0.2);
-  doc.line(COL_DESC-1,y-2,COL_DESC-1,y+6);
   doc.line(COL_CANT-8,y-2,COL_CANT-8,y+6);
   doc.line(COL_PU-8,y-2,COL_PU-8,y+6);
   doc.line(COL_SUB-18,y-2,COL_SUB-18,y+6);
@@ -842,24 +847,12 @@ function generarPDFNota(saleId){
 
     // Lineas verticales
     doc.setDrawColor(220,200,210);doc.setLineWidth(0.15);
-    doc.line(COL_DESC-1,y-1,COL_DESC-1,y+rowH-1);
     doc.line(COL_CANT-8,y-1,COL_CANT-8,y+rowH-1);
     doc.line(COL_PU-8,y-1,COL_PU-8,y+rowH-1);
     doc.line(COL_SUB-18,y-1,COL_SUB-18,y+rowH-1);
 
     // Foto MUY pequeña — 12x12mm
-    var fotoData=item.imgData||(function(){
-      try{var fm=JSON.parse(localStorage.getItem('brandy_pos_fotos')||'{}');return fm[item.id]||null;}catch(e){return null;}
-    })();
-    if(fotoData){
-      try{doc.addImage(fotoData,'JPEG',COL_FOTO+1,y+1,12,12);}
-      catch(e){doc.setFillColor(252,228,236);doc.roundedRect(COL_FOTO+1,y+1,12,12,1,1,'F');}
-    } else {
-      doc.setFillColor(252,228,236);doc.roundedRect(COL_FOTO+1,y+1,12,12,1,1,'F');
-      doc.setFontSize(6);doc.setTextColor(194,24,91);
-      doc.text('IMG',COL_FOTO+4,y+8);
-      doc.setTextColor(0,0,0);
-    }
+
 
     // Descripcion LARGA — hasta 55 caracteres
     var nm=item.name.length>80?item.name.slice(0,80)+'...':item.name;
