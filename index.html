@@ -1049,8 +1049,12 @@ function previewProdImg(input){
 function pdfWA(saleId){
   var sale=sales.find(function(x){return x.id===saleId;});
   if(!sale){toast('Nota no encontrada','error');return;}
-  generarPDFNota(saleId);
-  toast('PDF+WA listo');
+  var neg=cfg.bizName||'MI NEGOCIO';
+  var cli=sale.customer;
+  var tot=Math.floor(sale.total);
+  var msg=neg+' - Cliente: '+cli+' - Total: $'+tot+' - Adjunto PDF de tu compra.';
+  window.location.href='whatsapp://send?text='+encodeURIComponent(msg);
+  setTimeout(function(){generarPDFNota(saleId);},1000);
 }
 </script>
 
