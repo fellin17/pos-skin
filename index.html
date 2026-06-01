@@ -781,7 +781,7 @@ function generarPDFNota(saleId){
   if(!sale){toast('Nota no encontrada','error');return;}
   var jsPDF=window.jspdf.jsPDF;
   var doc=new jsPDF({unit:'mm',format:'letter',orientation:'portrait'});
-  var W=216,PL=14,PR=14;
+  var W=216,PL=18,PR=18;
   var y=14;
   var ln=function(h){y+=(h||5);};
   var fmt=function(v){return'$'+(parseFloat(v)||0).toFixed(2);};
@@ -789,163 +789,97 @@ function generarPDFNota(saleId){
   // ── ENCABEZADO ──
   var logoSize=26,logoX=PL,dataX=PL+logoSize+5,yStart=y;
   if(cfg.headerLogo){try{doc.addImage(cfg.headerLogo,'JPEG',logoX,y,logoSize,logoSize);}catch(e){}}
-  var nameSize=cfg.headerNameSize||26;
-  // Nombre en estilo elegante manuscrito
-  doc.setFontSize(nameSize);doc.setFont('times','bolditalic');doc.setTextColor(194,24,91);
-  // Espaciado entre letras manual — efecto caligráfico
+
+  // Nombre elegante en cursiva rosa con espaciado
   var bizName=cfg.bizName||'MI NEGOCIO';
-  var letterSpacing=1.2;
-  var totalW=0;
-  for(var li=0;li<bizName.length;li++){
-    var lw=doc.getTextWidth(bizName[li]);
-    doc.text(bizName[li],dataX+totalW,y+9);
-    totalW+=lw+letterSpacing;
+  doc.setFontSize(cfg.headerNameSize||24);
+  doc.setFont('times','bolditalic');
+  doc.setTextColor(194,24,91);
+  var ls=1.1,tw=0;
+  for(var i=0;i<bizName.length;i++){
+    doc.text(bizName[i],dataX+tw,y+9);
+    tw+=doc.getTextWidth(bizName[i])+ls;
   }
-  // Línea decorativa debajo del nombre
-  doc.setDrawColor(194,24,91);doc.setLineWidth(0.4);
-  doc.line(dataX,y+11,dataX+totalW-letterSpacing,y+11);
-  doc.setLineWidth(0.15);
-  doc.line(dataX,y+12.5,dataX+totalW-letterSpacing,y+12.5);
-  var yData=y+16;
+  // Línea decorativa
+  doc.setDrawColor(194,24,91);doc.setLineWidth(0.5);
+  doc.line(dataX,y+11,dataX+tw-ls,y+11);
+  doc.setLineWidth(0.15);doc.line(dataX,y+12.5,dataX+tw-ls,y+12.5);
+
+  // Datos negocio
+  var yd=y+17;
   doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
-  if(cfg.address){doc.text(cfg.address,dataX,yData);yData+=5;}
-  if(cfg.phone){doc.text('Tel: '+cfg.phone,dataX,yData);yData+=5;}
-  if(cfg.rfc){doc.text('RFC: '+cfg.rfc,dataX,yData);}
+  if(cfg.address){doc.text(cfg.address,dataX,yd);yd+=4.5;}
+  if(cfg.phone){doc.text('Tel: '+cfg.phone,dataX,yd);yd+=4.5;}
+  if(cfg.rfc){doc.text('RFC: '+cfg.rfc,dataX,yd);}
   doc.setTextColor(0,0,0);
-  y=Math.max(yStart+logoSize+3,yData+3);
-  doc.setDrawColor(194,24,91);doc.setLineWidth(0.8);doc.line(PL,y,W-PR,y);
-  doc.setLineWidth(0.2);ln(2);doc.line(PL,y,W-PR,y);ln(4);
+  y=Math.max(yStart+logoSize+3,yd+3);
+
+  // Línea separadora simple
+  doc.setDrawColor(0,0,0);doc.setLineWidth(0.5);doc.line(PL,y,W-PR,y);ln(4);
 
   // ── DATOS VENTA ──
   var d=new Date(sale.date);
-  doc.setFillColor(252,228,236);doc.rect(PL,y-2,W-PL-PR,12,'F');
-  doc.setDrawColor(220,180,200);doc.setLineWidth(0.2);doc.rect(PL,y-2,W-PL-PR,12,'S');
-  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(60,60,60);
-  doc.text('Fecha: '+d.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),PL+2,y+3);
-  doc.text('Hora: '+d.toLocaleTimeString('es-MX'),W-PR-2,y+3,{align:'right'});
-  doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
-  doc.text('Folio: #'+sale.id.slice(-8).toUpperCase(),PL+2,y+8);
-  doc.setTextColor(194,24,91);doc.setFontSize(9);
-  doc.text('Cliente: '+sale.customer,W-PR-2,y+8,{align:'right'});
-  doc.setTextColor(0,0,0);ln(16);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
+  var fechaStr=d.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  doc.text('Fecha: '+fechaStr,PL,y);
+  doc.text('Hora: '+d.toLocaleTimeString('es-MX'),W-PR,y,{align:'right'});ln(4.5);
+  doc.text('Folio: #'+sale.id.slice(-8).toUpperCase(),PL,y);
+  doc.setFont('helvetica','bold');doc.setFontSize(10);
+  doc.text('Cliente: '+sale.customer,W-PR,y,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9);ln(4);
+  doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(4);
 
   // ── ENCABEZADO COLUMNAS ──
-  var FOTO_W=14; // foto muy pequeña
-  var COL_FOTO=PL;
-  var COL_DESC=PL+FOTO_W+3;
-  var COL_CANT=W-PR-46;
-  var COL_PU=W-PR-22;
-  var COL_SUB=W-PR;
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(0,0,0);
+  doc.text('PRODUCTO',PL,y);
+  doc.text('CANT',PL+100,y,{align:'center'});
+  doc.text('P.UNIT.',PL+130,y,{align:'center'});
+  doc.text('SUBTOTAL',W-PR,y,{align:'right'});
+  ln(3);doc.setLineWidth(0.5);doc.line(PL,y,W-PR,y);ln(5);
 
-  doc.setFillColor(194,24,91);doc.rect(PL,y-2,W-PL-PR,8,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
-  doc.text('IMG',COL_FOTO+7,y+3,{align:'center'});
-  doc.text('DESCRIPCION DEL PRODUCTO',COL_DESC,y+3);
-  doc.text('QTY',COL_CANT,y+3,{align:'center'});
-  doc.text('P.UNIT',COL_PU,y+3,{align:'center'});
-  doc.text('TOTAL',COL_SUB,y+3,{align:'right'});
-  // lineas verticales
-  doc.setDrawColor(255,200,220);doc.setLineWidth(0.2);
-  doc.line(COL_DESC-1,y-2,COL_DESC-1,y+6);
-  doc.line(COL_CANT-8,y-2,COL_CANT-8,y+6);
-  doc.line(COL_PU-8,y-2,COL_PU-8,y+6);
-  doc.line(COL_SUB-18,y-2,COL_SUB-18,y+6);
-  doc.setTextColor(0,0,0);ln(10);
-
-  // ── ITEMS ──
-  var ROSA_CLARO=[255,235,245];
-  var BLANCO=[255,248,251];
-  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  // ── ITEMS con filas alternadas pastel ──
+  doc.setFont('helvetica','normal');doc.setFontSize(10);
 
   sale.items.forEach(function(item,idx){
-    var rowH=22;
-    var bg=idx%2===0?ROSA_CLARO:BLANCO;
-    doc.setFillColor(bg[0],bg[1],bg[2]);
-    doc.rect(PL,y-1,W-PL-PR,rowH,'F');
-
-    // Lineas verticales
-    doc.setDrawColor(220,200,210);doc.setLineWidth(0.15);
-    doc.line(COL_DESC-1,y-1,COL_DESC-1,y+rowH-1);
-    doc.line(COL_CANT-8,y-1,COL_CANT-8,y+rowH-1);
-    doc.line(COL_PU-8,y-1,COL_PU-8,y+rowH-1);
-    doc.line(COL_SUB-18,y-1,COL_SUB-18,y+rowH-1);
-
-    // Foto MUY pequeña — 12x12mm
-    var fotoData=item.imgData||(function(){
-      try{var fm=JSON.parse(localStorage.getItem('brandy_pos_fotos')||'{}');return fm[item.id]||null;}catch(e){return null;}
-    })();
-    if(fotoData){
-      try{doc.addImage(fotoData,'JPEG',COL_FOTO+1,y+1,12,12);}
-      catch(e){doc.setFillColor(252,228,236);doc.roundedRect(COL_FOTO+1,y+1,12,12,1,1,'F');}
-    } else {
-      doc.setFillColor(252,228,236);doc.roundedRect(COL_FOTO+1,y+1,12,12,1,1,'F');
-      doc.setFontSize(6);doc.setTextColor(194,24,91);
-      doc.text('IMG',COL_FOTO+4,y+8);
-      doc.setTextColor(0,0,0);
+    var rowH=7;
+    // Fondo alternado rosa pastel / blanco
+    if(idx%2===0){
+      doc.setFillColor(255,235,245);
+      doc.rect(PL,y-3,W-PL-PR,rowH+1,'F');
     }
-
-    // Descripcion LARGA — hasta 55 caracteres
-    var nm=item.name.length>80?item.name.slice(0,80)+'...':item.name;
-    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(20,20,20);
-    doc.text(nm,COL_DESC,y+6);
-
-    // Codigo y precio unit debajo
-    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(120,120,120);
-    var info='';
-    if(item.barcode) info+='Cod: '+item.barcode+'  ';
-    info+='Unit: '+fmt(item.sellPrice);
-    doc.text(info,COL_DESC,y+12);
+    var nm=item.name.length>55?item.name.slice(0,55)+'...':item.name;
     doc.setTextColor(0,0,0);
-
-    // Cantidad
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(30,30,30);
-    doc.text(String(item.qty),COL_CANT,y+9,{align:'center'});
-
-    // Precio unit
-    doc.setFont('helvetica','normal');doc.setFontSize(9);
-    doc.text(fmt(item.sellPrice),COL_PU,y+9,{align:'center'});
-
-    // Subtotal en rosa
-    doc.setFont('helvetica','bold');doc.setTextColor(194,24,91);
-    doc.text(fmt(item.sellPrice*item.qty),COL_SUB,y+9,{align:'right'});
-    doc.setTextColor(0,0,0);
-
-    doc.setDrawColor(220,180,200);doc.setLineWidth(0.2);
-    doc.line(PL,y+rowH-1,W-PR,y+rowH-1);
+    doc.text(nm,PL,y);
+    doc.text(String(item.qty),PL+100,y,{align:'center'});
+    doc.text(fmt(item.sellPrice),PL+130,y,{align:'center'});
+    doc.setFont('helvetica','bold');
+    doc.text(fmt(item.sellPrice*item.qty),W-PR,y,{align:'right'});
+    doc.setFont('helvetica','normal');
     ln(rowH);
   });
 
-  ln(3);
+  doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(5);
 
   // ── TOTALES ──
-  doc.setFillColor(255,240,246);
-  doc.rect(PL,y-1,W-PL-PR,8,'F');
-  doc.setDrawColor(220,180,200);doc.setLineWidth(0.2);doc.rect(PL,y-1,W-PL-PR,8,'S');
-  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,80,80);
-  doc.text('Articulos: '+sale.items.reduce(function(a,i){return a+i.qty;},0),PL+3,y+4);
-  doc.text('Subtotal:',COL_PU-5,y+4,{align:'right'});
-  doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
-  doc.text(fmt(sale.total),COL_SUB,y+4,{align:'right'});
-  ln(12);
-
-  // Total final
-  doc.setDrawColor(194,24,91);doc.setLineWidth(0.8);doc.line(PL,y,W-PR,y);ln(1);
-  doc.setLineWidth(0.2);doc.line(PL,y,W-PR,y);ln(2);
-  doc.setFillColor(194,24,91);doc.rect(PL,y,W-PL-PR,11,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(13);
-  doc.text('TOTAL A PAGAR:',PL+4,y+7);
-  doc.text(fmt(sale.total),W-PR,y+7,{align:'right'});
-  doc.setTextColor(0,0,0);ln(14);
-  doc.setLineWidth(0.8);doc.setDrawColor(194,24,91);doc.line(PL,y,W-PR,y);ln(1);
-  doc.setLineWidth(0.2);doc.line(PL,y,W-PR,y);ln(7);
+  doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);
+  doc.text('Subtotal:',W-PR-60,y);
+  doc.text(fmt(sale.total),W-PR,y,{align:'right'});ln(4);
+  doc.text('No. articulos: '+sale.items.reduce(function(a,i){return a+i.qty;},0),PL,y);
+  doc.setLineWidth(0.7);doc.line(W-PR-85,y,W-PR,y);ln(5);
+  doc.setFontSize(15);doc.setFont('helvetica','bold');
+  doc.text('TOTAL A PAGAR:',W-PR-85,y);
+  doc.text(fmt(sale.total),W-PR,y,{align:'right'});
+  ln(10);doc.setLineWidth(0.3);doc.setDrawColor(0,0,0);doc.line(PL,y,W-PR,y);ln(5);
 
   // ── PIE ──
-  doc.setFont('helvetica','italic');doc.setFontSize(10);doc.setTextColor(100,100,100);
+  doc.setFont('helvetica','italic');doc.setFontSize(10);doc.setTextColor(60,60,60);
   doc.text(cfg.msg||'Gracias por su compra! Vuelva pronto',W/2,y,{align:'center'});ln(5);
-  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(160,160,160);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(150,150,150);
   doc.text('Comprobante de venta  -  '+(cfg.bizName||'MI NEGOCIO'),W/2,y,{align:'center'});
 
   doc.save('ticket_'+sale.customer.replace(/[^a-zA-Z0-9]/g,'_')+'_'+sale.id.slice(-6)+'.pdf');
+  toast('PDF descargado');
+}
   toast('PDF descargado');
 }
 let _chartMob=null;let _reportePeriodo='';let _reporteData={};function toggleReporteMenu(){const m=document.getElementById('reporteMenu');m.style.display=m.style.display==='none'?'':'none';}
