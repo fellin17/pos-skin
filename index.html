@@ -1046,7 +1046,23 @@ function previewProdImg(input){
   reader.readAsDataURL(input.files[0]);
 }
 
-function pdfWA(id){toast('PDF+WA próximamente');}
+function pdfWA(saleId){
+  var sale=sales.find(function(x){return x.id===saleId;});
+  if(!sale){toast('Nota no encontrada','error');return;}
+  generarPDFNota(saleId);
+  var total=Math.floor(sale.total);
+  var cliente=sale.customer;
+  var negocio=cfg.bizName||'MI NEGOCIO';
+  var msg='*'+negocio+'*
+Cliente: '+cliente+'
+Total: $'+total+'
+
+Adjunto PDF.';
+  setTimeout(function(){
+    window.location.href='whatsapp://send?text='+encodeURIComponent(msg);
+  },2000);
+  toast('Abriendo WhatsApp...');
+}
 </script>
 
 </body>
