@@ -71,7 +71,7 @@ if(e.metaKey&&e.altKey&&k===73){e.preventDefault();return false;}});var t=setInt
 
 <div class="nav">
   <button class="active" onclick="showTab('scanner')"><span>📷</span>Escanear</button>
-  <button onclick="vozStockBajo();showTab('inventario')"><span>📦</span>Inventario</button>
+  <button onclick="try{vozStockBajo();}catch(e){}showTab('inventario')"><span>📦</span>Inventario</button>
   <button onclick="showTab('venta')"><span>🛍️</span>Venta</button>
   <button onclick="showTab('notas')"><span>🧾</span>Notas</button>
   <button onclick="showTab('config')" id='nav-config'><span>⚙️</span>Config</button>
@@ -1315,6 +1315,18 @@ function eliminarProducto(id){
   saveData();
   renderInventario();
   toast('🗑️ Producto eliminado');
+}
+
+function vozStockBajo(){
+  try{
+    var bajos=products.filter(function(p){return p.stock>0&&p.stock<10;});
+    var sinStock=products.filter(function(p){return p.stock===0;});
+    if(!bajos.length&&!sinStock.length) return;
+    var msg='';
+    if(sinStock.length>0) msg+='Atención. '+sinStock.length+' producto'+(sinStock.length>1?'s':'')+' sin existencia. ';
+    if(bajos.length>0) msg+='Stock bajo en '+bajos.length+' producto'+(bajos.length>1?'s':'')+'. Revisar inventario.';
+    hablar(msg);
+  }catch(e){}
 }
 </script>
 
