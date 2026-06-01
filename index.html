@@ -709,10 +709,10 @@ var customer=document.getElementById('ventaCliente').value.trim()||'Cliente';var
 function waNumNuevoMobEnviar(){const num=document.getElementById('waNumNuevoMob').value.trim().replace(/\D/g,'');if(num.length!==10){toast('Escribe los 10 dígitos del número','error');return;}
 const customer=document.getElementById('ventaCliente').value.trim();if(!customer){toast('Escribe el nombre de la clienta primero','error');return;}
 if(!cart.length){toast('El carrito está vacío','error');return;}
-const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,phone:num,items:cart.map(i=>({...i})),total,profit,inCut:false,};if(!cfg.customers)cfg.customers=[];if(!cfg.customers.includes(customer))cfg.customers.push(customer);products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();const lineas=sale.items.map(i=>`• ${i.name} x${i.qty} — $${(i.sellPrice*i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;document.getElementById('waNumNuevoMob').value='';toast('✅ Venta guardada — abriendo WhatsApp');setTimeout(()=>{window.location.href=`whatsapp://send?phone=52${num}&text=${encodeURIComponent(msg)}`;},500);}
+const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,phone:num,items:cart.map(i=>{var _p=products.find(function(p){return p.id===i.id;});return Object.assign({},i,{imgData:_p?(_p.imgData||null):null});}),total,profit,inCut:false,};if(!cfg.customers)cfg.customers=[];if(!cfg.customers.includes(customer))cfg.customers.push(customer);products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();const lineas=sale.items.map(i=>`• ${i.name} x${i.qty} — $${(i.sellPrice*i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;document.getElementById('waNumNuevoMob').value='';toast('✅ Venta guardada — abriendo WhatsApp');setTimeout(()=>{window.location.href=`whatsapp://send?phone=52${num}&text=${encodeURIComponent(msg)}`;},500);}
 function completarVenta(){const customer=document.getElementById('ventaCliente').value.trim().toUpperCase();if(!customer){toast('ESCRIBE EL NOMBRE DE LA CLIENTA','error');return;}
 if(!cart.length){toast('EL CARRITO ESTÁ VACÍO','error');return;}
-const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,items:cart.map(i=>({...i})),total,profit,inCut:false,qrData:`ID:${Date.now().toString()}\nFolio: #${Date.now().toString().slice(-8).toUpperCase()}\nCliente: ${customer}\nTOTAL: $${total.toFixed(2)}`};products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();const lineas=sale.items.map(i=>`• ${i.name.toUpperCase()} ×${i.qty} — $${(i.sellPrice * i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *Cliente: ${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();toast('✅ VENTA GUARDADA');setTimeout(()=>{if(confirm('¿ENVIAR POR WHATSAPP?')){window.location.href='whatsapp://send?text='+encodeURIComponent(msg);}},500);}
+const total=cart.reduce((s,i)=>s+i.sellPrice*i.qty,0);const profit=cart.reduce((s,i)=>s+(i.sellPrice-i.buyPrice)*i.qty,0);const sale={id:Date.now().toString(),date:new Date().toISOString(),customer,items:cart.map(i=>{var _p=products.find(function(p){return p.id===i.id;});return Object.assign({},i,{imgData:_p?(_p.imgData||null):null});}),total,profit,inCut:false,qrData:`ID:${Date.now().toString()}\nFolio: #${Date.now().toString().slice(-8).toUpperCase()}\nCliente: ${customer}\nTOTAL: $${total.toFixed(2)}`};products=products.map(p=>{const ci=cart.find(i=>i.id===p.id);return ci?{...p,stock:p.stock-ci.qty}:p;});sales.push(sale);saveData();const lineas=sale.items.map(i=>`• ${i.name.toUpperCase()} ×${i.qty} — $${(i.sellPrice * i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName || 'MI NEGOCIO'}*\n📅 ${new Date(sale.date).toLocaleDateString('es-MX')}\n👤 *Cliente: ${sale.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${sale.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;cart=[];document.getElementById('ventaCliente').value='';updateCartUI();renderInventario();toast('✅ VENTA GUARDADA');setTimeout(()=>{if(confirm('¿ENVIAR POR WHATSAPP?')){window.location.href='whatsapp://send?text='+encodeURIComponent(msg);}},500);}
 function renderNotas(){const q=(document.getElementById('notaSearch')?.value||'').toLowerCase();const el=document.getElementById('notasList');if(!el)return;const list=q?[...sales].reverse().filter(s=>s.customer.toLowerCase().includes(q)):[...sales].reverse().slice(0,20);if(!list.length){el.innerHTML='<div class="empty"><div class="icon">📋</div><p>Sin notas</p></div>';return;}
 el.innerHTML=list.map(s=>buildNotaHTML(s)).join('');}
 function buildNotaHTML(s){const d=new Date(s.date);const rows=s.items.map(i=>`
@@ -745,209 +745,12 @@ function buildNotaHTML(s){const d=new Date(s.date);const rows=s.items.map(i=>`
     </div>
   </div>`;}
 function waShare(saleId){const s=sales.find(x=>x.id===saleId);if(!s)return;const lineas=s.items.map(i=>`• ${i.name} ×${i.qty} — $${(i.sellPrice * i.qty).toFixed(2)}`).join('\n');const msg=`🏪 *${cfg.bizName}*\n📅 ${new Date(s.date).toLocaleDateString('es-MX')}\n👤 *${s.customer}*\n\n${lineas}\n\n━━━━━━━━━━━━━\n💰 *TOTAL: $${s.total.toFixed(2)}*\n━━━━━━━━━━━━━\n${cfg.msg || '¡Gracias por su compra!'}`;window.location.href='whatsapp://send?text='+encodeURIComponent(msg);}
-function generarPDFNota(saleId){
-  var sale=sales.find(function(s){return s.id===saleId;});
-  if(!sale){toast('Nota no encontrada','error');return;}
-  var jsPDF=window.jspdf.jsPDF;
-  var doc=new jsPDF({unit:'mm',format:'letter',orientation:'portrait'});
-  var W=216,PL=14,PR=14;
-  var y=0;
-  var ln=function(h){y+=(h||5);};
-  var fmt=function(v){return'$'+(parseFloat(v)||0).toFixed(2);};
-
-  // Colores pastel contables
-  var ROSA    = [247,220,230];  // fondo encabezado
-  var ROSAOS  = [194,24,91];    // acento
-  var VERDE   = [220,237,220];  // fila par
-  var AZUL    = [220,230,245];  // fila impar
-  var AMARILLO= [255,249,220];  // totales
-  var GRIS    = [245,245,245];  // subencabezado
-  var LINEA   = [180,180,200];  // líneas
-
-  // ── ENCABEZADO ESTILO LIBRO CONTABLE ──
-  // Borde doble superior
-  doc.setFillColor(ROSA[0],ROSA[1],ROSA[2]);
-  doc.rect(0,0,W,42,'F');
-  doc.setDrawColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.setLineWidth(1.5);doc.line(0,0,W,0);
-  doc.setLineWidth(0.5);doc.line(0,3,W,3);
-  doc.setLineWidth(1.5);doc.line(0,42,W,42);
-  doc.setLineWidth(0.5);doc.line(0,39,W,39);
-
-  // Logo
-  if(cfg.headerLogo){try{doc.addImage(cfg.headerLogo,'JPEG',PL,6,26,26);}catch(e){}}
-  var dx=cfg.headerLogo?PL+30:PL;
-
-  // Nombre negocio
-  doc.setTextColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.setFontSize(cfg.headerNameSize||18);doc.setFont('helvetica','bold');
-  doc.text(cfg.bizName||'MI NEGOCIO',dx,16);
-
-  // Datos negocio
-  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,80,80);
-  var yd=22;
-  if(cfg.address){doc.text(cfg.address,dx,yd);yd+=4.5;}
-  if(cfg.phone){doc.text('Tel: '+cfg.phone,dx,yd);yd+=4.5;}
-  if(cfg.rfc){doc.text('RFC: '+cfg.rfc,dx,yd);}
-
-  // Sello "COMPROBANTE" a la derecha
-  doc.setDrawColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.setLineWidth(0.8);
-  doc.roundedRect(W-PR-36,6,36,18,2,2,'S');
-  doc.setTextColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.setFont('helvetica','bold');doc.setFontSize(7);
-  doc.text('COMPROBANTE',W-PR-18,13,{align:'center'});
-  doc.text('DE VENTA',W-PR-18,18,{align:'center'});
-  doc.setFontSize(9);
-  doc.text('No. '+sale.id.slice(-6).toUpperCase(),W-PR-18,23,{align:'center'});
-
-  y=46;
-
-  // ── DATOS DE LA OPERACION ──
-  doc.setFillColor(GRIS[0],GRIS[1],GRIS[2]);
-  doc.rect(PL,y,W-PL-PR,16,'F');
-  doc.setDrawColor(LINEA[0],LINEA[1],LINEA[2]);doc.setLineWidth(0.3);
-  doc.rect(PL,y,W-PL-PR,16,'S');
-
-  var d=new Date(sale.date);
-  doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor(60,60,60);
-  doc.text('FECHA:',PL+3,y+5);doc.setFont('helvetica','normal');
-  doc.text(d.toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}),PL+18,y+5);
-  doc.setFont('helvetica','bold');
-  doc.text('HORA:',PL+3,y+11);doc.setFont('helvetica','normal');
-  doc.text(d.toLocaleTimeString('es-MX'),PL+18,y+11);
-
-  doc.setFont('helvetica','bold');
-  doc.text('FOLIO:',W/2,y+5);doc.setFont('helvetica','normal');
-  doc.text('#'+sale.id.slice(-8).toUpperCase(),W/2+14,y+5);
-  doc.setFont('helvetica','bold');
-  doc.text('CLIENTE:',W/2,y+11);doc.setFont('helvetica','normal');doc.setTextColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.text(sale.customer,W/2+18,y+11);
-  doc.setTextColor(0,0,0);
-  ln(20);
-
-  // ── ENCABEZADO COLUMNAS — estilo libro contable ──
-  var COL_FOTO=PL;
-  var COL_DESC=PL+20;
-  var COL_CANT=W-PR-54;
-  var COL_PU=W-PR-30;
-  var COL_SUB=W-PR;
-
-  doc.setFillColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.rect(PL,y,W-PL-PR,9,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(8);
-  doc.text('IMG',COL_FOTO+8,y+6,{align:'center'});
-  doc.text('DESCRIPCION DEL PRODUCTO',COL_DESC,y+6);
-  doc.text('CANT',COL_CANT,y+6,{align:'center'});
-  doc.text('P.UNIT.',COL_PU,y+6,{align:'center'});
-  doc.text('IMPORTE',COL_SUB,y+6,{align:'right'});
-  doc.setTextColor(0,0,0);
-
-  // Líneas verticales del libro
-  doc.setDrawColor(255,255,255);doc.setLineWidth(0.5);
-  doc.line(COL_DESC-2,y,COL_DESC-2,y+9);
-  doc.line(COL_CANT-8,y,COL_CANT-8,y+9);
-  doc.line(COL_PU-8,y,COL_PU-8,y+9);
-  doc.line(COL_SUB-16,y,COL_SUB-16,y+9);
-  ln(11);
-
-  // ── FILAS DE PRODUCTOS ──
-  sale.items.forEach(function(item,idx){
-    var rowH=20;
-    // Fondo alternado pastel
-    var bg=idx%2===0?VERDE:AZUL;
-    doc.setFillColor(bg[0],bg[1],bg[2]);
-    doc.rect(PL,y-1,W-PL-PR,rowH,'F');
-
-    // Líneas verticales del libro contable
-    doc.setDrawColor(LINEA[0],LINEA[1],LINEA[2]);doc.setLineWidth(0.2);
-    doc.line(COL_DESC-2,y-1,COL_DESC-2,y+rowH-1);
-    doc.line(COL_CANT-8,y-1,COL_CANT-8,y+rowH-1);
-    doc.line(COL_PU-8,y-1,COL_PU-8,y+rowH-1);
-    doc.line(COL_SUB-16,y-1,COL_SUB-16,y+rowH-1);
-
-    // Foto producto
-    if(item.imgData){
-      try{doc.addImage(item.imgData,'JPEG',COL_FOTO+1,y+1,16,16);}
-      catch(e){doc.setFillColor(255,220,235);doc.roundedRect(COL_FOTO+1,y+1,16,16,2,2,'F');}
-    } else {
-      doc.setFillColor(255,220,235);doc.roundedRect(COL_FOTO+1,y+1,16,16,2,2,'F');
-      doc.setFontSize(8);doc.setTextColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-      doc.text('SIN',COL_FOTO+4,y+9);doc.text('FOTO',COL_FOTO+4,y+13);
-      doc.setTextColor(0,0,0);
-    }
-
-    // Nombre — amplio
-    var nm=item.name.length>42?item.name.slice(0,42)+'...':item.name;
-    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(30,30,30);
-    doc.text(nm,COL_DESC,y+7);
-    // Código y precio unit debajo
-    doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(100,100,100);
-    var sub2='';
-    if(item.barcode) sub2+='Cod: '+item.barcode+'   ';
-    sub2+='P.Unit: '+fmt(item.sellPrice);
-    doc.text(sub2,COL_DESC,y+13);
-
-    // Cantidad
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(30,30,30);
-    doc.text(String(item.qty),COL_CANT,y+10,{align:'center'});
-
-    // Precio unitario
-    doc.setFont('helvetica','normal');doc.setFontSize(9);
-    doc.text(fmt(item.sellPrice),COL_PU,y+10,{align:'center'});
-
-    // Subtotal
-    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-    doc.text(fmt(item.sellPrice*item.qty),COL_SUB,y+10,{align:'right'});
-    doc.setTextColor(0,0,0);
-
-    // Línea horizontal
-    doc.setDrawColor(LINEA[0],LINEA[1],LINEA[2]);doc.setLineWidth(0.3);
-    doc.line(PL,y+rowH-1,W-PR,y+rowH-1);
-    ln(rowH);
-  });
-
-  ln(3);
-
-  // ── TOTALES estilo libro contable ──
-  // Subtotal
-  doc.setFillColor(AMARILLO[0],AMARILLO[1],AMARILLO[2]);
-  doc.rect(PL,y,W-PL-PR,8,'F');
-  doc.setDrawColor(LINEA[0],LINEA[1],LINEA[2]);doc.setLineWidth(0.3);
-  doc.rect(PL,y,W-PL-PR,8,'S');
-  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(80,80,80);
-  doc.text('No. articulos: '+sale.items.reduce(function(a,i){return a+i.qty;},0),PL+3,y+5);
-  doc.text('Subtotal:',COL_PU-10,y+5,{align:'right'});
-  doc.setFont('helvetica','bold');doc.setTextColor(0,0,0);
-  doc.text(fmt(sale.total),COL_SUB,y+5,{align:'right'});
-  ln(11);
-
-  // Total final — doble línea estilo libro
-  doc.setLineWidth(0.8);doc.setDrawColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.line(PL,y,W-PR,y);ln(1);
-  doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(2);
-  doc.setFillColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.rect(PL,y,W-PL-PR,12,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(14);
-  doc.text('TOTAL A PAGAR:',PL+4,y+8);
-  doc.text(fmt(sale.total),W-PR,y+8,{align:'right'});
-  doc.setTextColor(0,0,0);
-  ln(15);
-  // Doble línea cierre
-  doc.setLineWidth(0.8);doc.setDrawColor(ROSAOS[0],ROSAOS[1],ROSAOS[2]);
-  doc.line(PL,y,W-PR,y);ln(1);
-  doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);
-  ln(8);
-
-  // ── PIE ──
-  doc.setFont('helvetica','italic');doc.setFontSize(10);doc.setTextColor(100,100,100);
-  doc.text(cfg.msg||'Gracias por su compra! Vuelva pronto',W/2,y,{align:'center'});ln(5);
-  doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(160,160,160);
-  doc.text('Comprobante de venta  -  '+(cfg.bizName||'MI NEGOCIO')+'  -  '+new Date().getFullYear(),W/2,y,{align:'center'});
-
-  doc.save('ticket_'+sale.customer.replace(/[^a-zA-Z0-9]/g,'_')+'_'+sale.id.slice(-6)+'.pdf');
-  toast('📄 PDF descargado');
-}
+function generarPDFNota(saleId){const sale=sales.find(s=>s.id===saleId);if(!sale){toast('Nota no encontrada','error');return;}
+const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'letter',orientation:'portrait'});const W=216,PL=18,PR=18;let y=14;const ln=(h)=>{y+=h;};const fmt=v=>'$'+(v||0).toFixed(2);const nameSize=cfg.headerNameSize||20;const dataSize=cfg.headerDataSize||9;const bodySize=cfg.ticketBodySize||10;const lineH=cfg.ticketLineH||5.5;const nameBold=cfg.headerNameBold!==false;const nameItal=cfg.headerNameItalic===true;const jsPdfFont=nameBold&&nameItal?'bolditalic':nameBold?'bold':nameItal?'italic':'normal';const logoSize=26;const logoX=PL;const dataX=PL+logoSize+5;const yStart=y;if(cfg.headerLogo){try{doc.addImage(cfg.headerLogo,'JPEG',logoX,y,logoSize,logoSize);}catch{}}
+doc.setFontSize(nameSize);doc.setFont('helvetica',jsPdfFont);doc.text(cfg.bizName||'MI NEGOCIO',dataX,y+7);let yData=y+7+nameSize*0.38;doc.setFontSize(dataSize);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);if(cfg.address){doc.text(cfg.address,dataX,yData);yData+=dataSize*0.55;}
+if(cfg.phone){doc.text('Tel: '+cfg.phone,dataX,yData);yData+=dataSize*0.55;}
+if(cfg.rfc){doc.text('RFC: '+cfg.rfc,dataX,yData);yData+=dataSize*0.55;}
+doc.setTextColor(0,0,0);y=Math.max(yStart+logoSize+3,yData+2);doc.setLineWidth(0.5);doc.line(PL,y,W-PR,y);ln(4);const d=new Date(sale.date);doc.setFontSize(9);doc.setFont('helvetica','normal');const fechaStr=d.toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});doc.text(`Fecha: ${fechaStr}`,PL,y);doc.text(`Hora: ${d.toLocaleTimeString('es-MX')}`,W-PR,y,{align:'right'});ln(4.5);doc.text(`Folio: #${sale.id.slice(-8).toUpperCase()}`,PL,y);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(`Cliente: ${sale.customer}`,W-PR,y,{align:'right'});doc.setFont('helvetica','normal');doc.setFontSize(9);ln(4);doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(4);doc.setFontSize(bodySize);doc.setFont('helvetica','bold');doc.text('PRODUCTO',PL,y);doc.text('CANT',PL+98,y,{align:'center'});doc.text('P.UNIT.',PL+128,y,{align:'center'});doc.text('SUBTOTAL',W-PR,y,{align:'right'});ln(3);doc.setLineWidth(0.5);doc.line(PL,y,W-PR,y);ln(lineH);doc.setFont('helvetica','normal');doc.setFontSize(bodySize);sale.items.forEach(item=>{const maxChars=Math.floor(85/(bodySize*0.42));const name=item.name.length>maxChars?item.name.slice(0,maxChars)+'…':item.name;doc.text(name,PL,y);doc.text(String(item.qty),PL+98,y,{align:'center'});doc.text(fmt(item.sellPrice),PL+128,y,{align:'center'});doc.setFont('helvetica','bold');doc.text(fmt(item.sellPrice*item.qty),W-PR,y,{align:'right'});doc.setFont('helvetica','normal');ln(lineH);});doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(5);doc.setFontSize(10);doc.setFont('helvetica','normal');doc.text('Subtotal:',W-PR-60,y);doc.text(fmt(sale.total),W-PR,y,{align:'right'});ln(4);doc.text(`No. artículos: ${sale.items.reduce((a,i)=>a+i.qty,0)}`,PL,y);doc.setLineWidth(0.7);doc.line(W-PR-85,y,W-PR,y);ln(5);doc.setFontSize(15);doc.setFont('helvetica','bold');doc.text('TOTAL A PAGAR:',W-PR-85,y);doc.text(fmt(sale.total),W-PR,y,{align:'right'});ln(10);doc.setDrawColor(200,200,200);doc.setLineWidth(0.3);doc.line(PL,y,W-PR,y);ln(5);doc.setFont('helvetica','italic');doc.setFontSize(10);doc.setTextColor(60,60,60);doc.text(cfg.msg||'¡Gracias por su compra! Vuelva pronto 😊',W/2,y,{align:'center'});ln(5);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(150,150,150);doc.text('Comprobante de venta — '+(cfg.bizName||'MI NEGOCIO'),W/2,y,{align:'center'});doc.save(`ticket_${sale.customer.replace(/\s+/g,'_')}_${sale.id.slice(-6)}.pdf`);toast('📄 PDF descargado');}
 let _chartMob=null;let _reportePeriodo='';let _reporteData={};function toggleReporteMenu(){const m=document.getElementById('reporteMenu');m.style.display=m.style.display==='none'?'':'none';}
 function cerrarReporte(){document.getElementById('reporteContainer').style.display='none';if(_chartMob){_chartMob.destroy();_chartMob=null;}}
 function generarReporteMob(periodo){_reportePeriodo=periodo;document.getElementById('reporteMenu').style.display='none';document.getElementById('reporteContainer').style.display='';if(_chartMob){_chartMob.destroy();_chartMob=null;}
